@@ -1,0 +1,4 @@
+synlog.tcl
+*.log
+*.log.bak
+*Implmnt/
