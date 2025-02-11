@@ -127,6 +127,10 @@ architecture arch of LimePSB_RPCM_top is
    signal neo430_ext_irq_reg     : std_logic_vector(7 downto 0);
    signal neo430_ext_irq_rising_edge : std_logic_vector(7 downto 0);
 
+   signal neo430_spi_sclk        : std_logic;
+   signal neo430_spi_mosi        : std_logic;  
+   signal neo430_spi_cs          : std_logic;
+
    signal vctcxo_tamer_mm_irq    : std_logic;
    signal vctcxo_tamer_mm_irq_reg: std_logic;
 
@@ -321,10 +325,10 @@ por_rst_n <= por_vect(0) AND por_vect(1);
      uart_txd_o      => FPGA_GPIO(0),  -- UART send data
      uart_rxd_i      => FPGA_GPIO(1),  -- UART receive data
      -- SPI --
-     spi_sclk_o      => FPGA_SPI0_SCLK,   -- serial clock line
-     spi_mosi_o      => FPGA_SPI0_MOSI,   -- serial data line out
-     spi_miso_i      => '0',              -- serial data line in
-     spi_cs_o(0)     => FPGA_SPI0_DAC_SS, -- SPI CS
+     spi_sclk_o      => neo430_spi_sclk, -- serial clock line
+     spi_mosi_o      => neo430_spi_mosi, -- serial data line out
+     spi_miso_i      => '0',             -- serial data line in
+     spi_cs_o(0)     => neo430_spi_cs,   -- SPI CS
      spi_cs_o(1)     => open, -- SPI CS
      spi_cs_o(2)     => open, -- SPI CS
      spi_cs_o(3)     => open, -- SPI CS
@@ -432,8 +436,12 @@ por_rst_n <= por_vect(0) AND por_vect(1);
    
    FPGA_RF_SW_TDD    <= PCIE_UIM;
    --FPGA_RF_SW_TDD    <= '1';
-   
-   
+
+   --DAC can be controlled from host only when GPSO is turned off
+   FPGA_SPI0_SCLK   <= RPI_SPI1_SCLK   when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_sclk;
+   FPGA_SPI0_MOSI   <= RPI_SPI1_MOSI   when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_mosi;
+   FPGA_SPI0_DAC_SS <= RPI_SPI1_SS2    when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_cs;
+
    FPGA_SYNC_OUT     <= LMK10_CLK_OUT0;
 
    GNSS_RESET <= '1';
