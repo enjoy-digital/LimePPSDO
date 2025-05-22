@@ -434,8 +434,15 @@ por_rst_n <= por_vect(0) AND por_vect(1);
    RPI_UART0_RX      <= GNSS_UART_TX;
    GNSS_UART_RX      <= RPI_UART0_TX;
    
-   FPGA_RF_SW_TDD    <= PCIE_UIM;
-   --FPGA_RF_SW_TDD    <= '1';
+   -- In HW_VER="01" TDD signal has to be inverted
+   process(all)
+   begin 
+      if hw_ver_sig(0)='1' then 
+         FPGA_RF_SW_TDD    <= NOT PCIE_UIM; 
+      else 
+         FPGA_RF_SW_TDD    <= PCIE_UIM;
+      end if;
+   end process;
 
    --DAC can be controlled from host only when GPSO is turned off
    FPGA_SPI0_SCLK   <= RPI_SPI1_SCLK   when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_sclk;
