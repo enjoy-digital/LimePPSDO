@@ -243,9 +243,10 @@ begin
    -- ---------------------------------------------------------------------------------------------
    
    --FPGA direct clocking
-   from_gpsdocfg.IICFG_EN           <=  mem( 0) (0);
-   from_gpsdocfg.IICFG_CLK_SEL      <=  mem( 0) (1);
-   from_gpsdocfg.IICFG_TPULSE_SEL   <=  mem( 0) (3 downto 2);
+   from_gpsdocfg.IICFG_EN              <=  mem( 0) (0);
+   from_gpsdocfg.IICFG_CLK_SEL         <=  mem( 0) (1);
+   from_gpsdocfg.IICFG_TPULSE_SEL      <=  mem( 0) (3 downto 2);
+   from_gpsdocfg.IICFG_RPI_SYNC_IN_DIR <=  mem( 0) (4);
    from_gpsdocfg.IICFG_1S_TARGET    <=  mem( 2) & mem( 1); 
    from_gpsdocfg.IICFG_1S_TOL       <=  mem( 3); 
    from_gpsdocfg.IICFG_10S_TARGET   <=  mem( 5) & mem( 4); 

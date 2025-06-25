@@ -20,9 +20,10 @@ package gpsdocfg_pkg is
    
    -- Outputs from the fpgacfg.
    type t_FROM_GPSDOCFG is record
-      IICFG_EN          : std_logic;
-      IICFG_CLK_SEL     : std_logic;
-      IICFG_TPULSE_SEL  : std_logic_vector(1 downto 0);
+      IICFG_EN                : std_logic;
+      IICFG_CLK_SEL           : std_logic;
+      IICFG_TPULSE_SEL        : std_logic_vector(1 downto 0);
+      IICFG_RPI_SYNC_IN_DIR   : std_logic;
       --IIRST_CNT         : std_logic;
       --IIIRQ_EN          : std_logic;
       --IIIRQ_RST         : std_logic;

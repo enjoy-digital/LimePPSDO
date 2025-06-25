@@ -450,6 +450,9 @@ por_rst_n <= por_vect(0) AND por_vect(1);
    FPGA_SPI0_DAC_SS <= RPI_SPI1_SS2    when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_cs;
 
    FPGA_SYNC_OUT     <= LMK10_CLK_OUT0;
+   
+   RPI_SYNC_IN <=    'Z'            when from_gpsdocfg.IICFG_TPULSE_SEL = "10" OR from_gpsdocfg.IICFG_RPI_SYNC_IN_DIR = '0' else 
+                     GNSS_TPULSE;          -- 10 - RPI_SYNC_IN is input , else - RPI_SYNC_IN is output with GNSS_TPULSE
 
    GNSS_RESET <= '1';
    
