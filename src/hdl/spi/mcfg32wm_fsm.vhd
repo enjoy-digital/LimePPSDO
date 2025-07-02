@@ -26,8 +26,8 @@ entity mcfg32wm_fsm is
 		dout_reg_sen: out std_logic;			-- Data out register shift enable
 		dout_reg_len: out std_logic;			-- Data out register load enable
 		mem_we: out std_logic;				-- Memory write enable
-		oe: out std_logic;				-- Output enable
-		stateo: out std_logic_vector(5 downto 0)
+		oe: out std_logic				-- Output enable
+		--stateo: out std_logic_vector(5 downto 0)
 	);
 end mcfg32wm_fsm;
 
@@ -85,7 +85,7 @@ begin
 			state <= next_state;
 		end if;
 	end process state_register;
-	stateo <= state;
+	--stateo <= state;
 
 	state_machine: process (state, sen, inst_reg, address, mimo_en)
 	begin

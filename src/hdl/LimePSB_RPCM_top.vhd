@@ -88,8 +88,10 @@ architecture arch of LimePSB_RPCM_top is
    --signal beat          : std_logic;
   
 
-   signal to_gpsdocfg    : t_TO_GPSDOCFG;
-   signal from_gpsdocfg  : t_FROM_GPSDOCFG;
+   signal to_gpsdocfg      : t_TO_GPSDOCFG;
+   signal from_gpsdocfg    : t_FROM_GPSDOCFG;
+   signal rpi_spi1_miso_o  : std_logic;
+   signal gpsdocfg_oen     : std_logic;
 
    signal fpga_gpio_reg : std_logic_vector (FPGA_GPIO'LENGTH-1 downto 0);
    signal bom_ver_sig   : std_logic_vector(2 downto 0);
@@ -258,12 +260,12 @@ por_rst_n <= por_vect(0) AND por_vect(1);
       sdin           => RPI_SPI1_MOSI,
       sclk           => RPI_SPI1_SCLK,
       sen            => RPI_SPI1_SS1,
-      sdout          => RPI_SPI1_MISO,  
+      sdout          => rpi_spi1_miso_o,  
       -- Signals coming from the pins or top level serial interface
       lreset         => not por_rst_n,   -- Logic reset signal, resets logic cells only  (use only one reset)
       mreset         => not por_rst_n,   -- Memory reset signal, resets configuration memory only (use only one reset)      
-      oen            => open,
-      stateo         => open,      
+      oen            => gpsdocfg_oen,
+      --stateo         => open,      
       to_gpsdocfg    => to_gpsdocfg,
       from_gpsdocfg  => from_gpsdocfg
    );
@@ -328,12 +330,13 @@ por_rst_n <= por_vect(0) AND por_vect(1);
      spi_sclk_o      => neo430_spi_sclk, -- serial clock line
      spi_mosi_o      => neo430_spi_mosi, -- serial data line out
      spi_miso_i      => '0',             -- serial data line in
-     spi_cs_o(0)     => neo430_spi_cs,   -- SPI CS
-     spi_cs_o(1)     => open, -- SPI CS
-     spi_cs_o(2)     => open, -- SPI CS
-     spi_cs_o(3)     => open, -- SPI CS
-     spi_cs_o(4)     => open, -- SPI CS
-     spi_cs_o(5)     => open, -- SPI CS
+     spi_cs_o        => neo430_spi_cs,   -- SPI CS
+     --spi_cs_o(0)     => neo430_spi_cs,   -- SPI CS
+     --spi_cs_o(1)     => open, -- SPI CS
+     --spi_cs_o(2)     => open, -- SPI CS
+     --spi_cs_o(3)     => open, -- SPI CS
+     --spi_cs_o(4)     => open, -- SPI CS
+     --spi_cs_o(5)     => open, -- SPI CS
      twi_sda_io      => open, -- twi serial data line
      twi_scl_io      => open, -- twi serial clock line
      -- external interrupts --
@@ -398,7 +401,7 @@ por_rst_n <= por_vect(0) AND por_vect(1);
          mm_addr            => neo430_avm_address(7 downto 0),
          mm_wr_data         => neo430_avm_writedata(7 downto 0),
          mm_rd_data         => neo430_avm_readdata(7 downto 0),
-         mm_rd_datav        => open,
+         --mm_rd_datav        => open,
          mm_wait_req        => neo430_avm_waitrequest,
          
          -- Avalon Interrupts
@@ -455,6 +458,8 @@ por_rst_n <= por_vect(0) AND por_vect(1);
                      GNSS_TPULSE;          -- 10 - RPI_SYNC_IN is input , else - RPI_SYNC_IN is output with GNSS_TPULSE
 
    GNSS_RESET <= '1';
+   
+   RPI_SPI1_MISO <= rpi_spi1_miso_o when gpsdocfg_oen = '1' else 'Z';
    
    
   

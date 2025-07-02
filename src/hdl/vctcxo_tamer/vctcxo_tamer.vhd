@@ -52,7 +52,7 @@ entity vctcxo_tamer is
         mm_addr            :   in  std_logic_vector(7 downto 0);
         mm_wr_data         :   in  std_logic_vector(7 downto 0);
         mm_rd_data         :   out std_logic_vector(7 downto 0);
-        mm_rd_datav        :   out std_logic;
+        --mm_rd_datav        :   out std_logic;
         mm_wait_req        :   out std_logic := '0';
 
         -- Avalon Interrupts
@@ -435,7 +435,7 @@ begin
         if( rising_edge(mm_clock) ) then
 
             -- Data valid is just a one-cycle delay of read request
-            mm_rd_datav <= mm_rd_req;
+            --mm_rd_datav <= mm_rd_req;
             mm_wait_req <= '0';
 
             case to_integer(unsigned(mm_addr)) is

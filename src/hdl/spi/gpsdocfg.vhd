@@ -34,7 +34,7 @@ entity gpsdocfg is
       mreset      : in  std_logic;  -- Memory reset signal, resets configuration memory only (use only one reset)
       
       oen         : out std_logic;  --nc
-      stateo      : out std_logic_vector(5 downto 0);
+      --stateo      : out std_logic_vector(5 downto 0);
       
       to_gpsdocfg  : in  t_TO_GPSDOCFG;
       from_gpsdocfg: out t_FROM_GPSDOCFG
@@ -74,14 +74,14 @@ architecture arch of gpsdocfg is
    signal oe: std_logic;                              -- Tri state buffers control
    signal spi_config_data_rev	: std_logic_vector(143 downto 0);
    
-   signal BOARD_ID_reg        : std_logic_vector(15 downto 0);
-   signal MAJOR_REV_reg       : std_logic_vector(15 downto 0);
-   signal COMPILE_REV_reg     : std_logic_vector(15 downto 0);
-
-   attribute noprune          : boolean;
-   attribute noprune of BOARD_ID_reg      : signal is true;
-   attribute noprune of MAJOR_REV_reg     : signal is true;
-   attribute noprune of COMPILE_REV_reg   : signal is true;
+   --signal BOARD_ID_reg        : std_logic_vector(15 downto 0);
+   --signal MAJOR_REV_reg       : std_logic_vector(15 downto 0);
+   --signal COMPILE_REV_reg     : std_logic_vector(15 downto 0);
+   --
+   --attribute noprune          : boolean;
+   --attribute noprune of BOARD_ID_reg      : signal is true;
+   --attribute noprune of MAJOR_REV_reg     : signal is true;
+   --attribute noprune of COMPILE_REV_reg   : signal is true;
    
    
 				
@@ -112,10 +112,15 @@ begin
    -- ---------------------------------------------------------------------------------------------
    -- Finite state machines
    -- ---------------------------------------------------------------------------------------------
+   --fsm: mcfg32wm_fsm port map( 
+   --   address => maddress, mimo_en => mimo_en, inst_reg => inst_reg, sclk => sclk, sen => sen, reset => lreset,
+   --   inst_reg_en => inst_reg_en, din_reg_en => din_reg_en, dout_reg_sen => dout_reg_sen,
+   --   dout_reg_len => dout_reg_len, mem_we => mem_we, oe => oe, stateo => stateo);
+      
    fsm: mcfg32wm_fsm port map( 
       address => maddress, mimo_en => mimo_en, inst_reg => inst_reg, sclk => sclk, sen => sen, reset => lreset,
       inst_reg_en => inst_reg_en, din_reg_en => din_reg_en, dout_reg_sen => dout_reg_sen,
-      dout_reg_len => dout_reg_len, mem_we => mem_we, oe => oe, stateo => stateo);
+      dout_reg_len => dout_reg_len, mem_we => mem_we, oe => oe);
       
    -- ---------------------------------------------------------------------------------------------
    -- Instruction register

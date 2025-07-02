@@ -84,7 +84,7 @@ entity neo430_top_avm is
     spi_sclk_o      : out std_logic; -- serial clock line
     spi_mosi_o      : out std_logic; -- serial data line out
     spi_miso_i      : in  std_logic; -- serial data line in
-    spi_cs_o        : out std_logic_vector(05 downto 0); -- SPI CS
+    spi_cs_o        : out std_logic; -- SPI CS
     twi_sda_io      : inout std_logic; -- twi serial data line
     twi_scl_io      : inout std_logic; -- twi serial clock line
     -- external interrupts --
@@ -229,7 +229,7 @@ begin
   uart_txd_o     <= std_logic(uart_txd_o_int);
   spi_sclk_o     <= std_logic(spi_sclk_o_int);
   spi_mosi_o     <= std_logic(spi_mosi_o_int);
-  spi_cs_o       <= std_logic_vector(spi_cs_o_int);
+  spi_cs_o       <= std_logic(spi_cs_o_int(0));
   ext_ack_o      <= std_logic_vector(irq_ack_o_int);
   freq_gen_o     <= std_logic_vector(freq_gen_o_int);
 
