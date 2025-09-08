@@ -202,6 +202,43 @@ class BaseSoC(SoCMini):
         self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
         self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
 
+        # Neo430 VHD2V Converter.
+        self.vhd2v_converter_neo430 = VHD2VConverter(self.platform,
+            top_entity    = "neo430_top_avm",
+            build_dir     = os.path.abspath(os.path.dirname(__file__)),
+            work_package  = "neo430",
+            force_convert = True,
+            add_instance  = False,
+            params        = {}
+        )
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_addr_gen.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_alu.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_application_image.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_boot_rom.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_bootloader_image.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_cfu.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_control.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_cpu.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_crc.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_dmem.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_exirq.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_freq_gen.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_gpio.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_imem.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_muldiv.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_package.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_pwm.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_reg_file.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_spi.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_sysconfig.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_timer.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_top.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_trng.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_twi.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_uart.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_wb_interface.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_wdt.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/top_templates/neo430_top_avm.vhd")
 
 # Build --------------------------------------------------------------------------------------------
 def main():
