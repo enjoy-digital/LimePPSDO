@@ -50,8 +50,8 @@ component mcfg32wm_fsm
 		dout_reg_sen: out std_logic;			-- Data out register shift enable
 		dout_reg_len: out std_logic;			-- Data out register load enable
 		mem_we: out std_logic;				-- Memory write enable
-		oe: out std_logic;				-- Output enable
-		stateo: out std_logic_vector(5 downto 0)
+		oe: out std_logic				-- Output enable
+		--stateo: out std_logic_vector(5 downto 0)
 	);
 end component;
 

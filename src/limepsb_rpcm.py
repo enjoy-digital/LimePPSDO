@@ -169,6 +169,23 @@ class BaseSoC(SoCMini):
         self.vhd2v_converter_pps_detector.add_source("hdl/pps_detector/pps_detector.vhd")
         self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
 
+        # GPSDOCFG VHD2V Converter.
+        self.vhd2v_converter_gpsdocfg = VHD2VConverter(self.platform,
+            top_entity    = "gpsdocfg",
+            build_dir     = os.path.abspath(os.path.dirname(__file__)),
+            work_package  = "work",
+            force_convert = True,
+            add_instance  = False,
+            params        = {}
+        )
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/revisions.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/gpsdocfg.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/gpsdocfg_pkg.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mcfg32wm_fsm.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mcfg_components.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mem_package.vhd")
+        self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
+
 # Build --------------------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on LimePSB RPCM Board")
