@@ -12,13 +12,14 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-library synplify;
-use synplify.attributes.all;
+--library synplify;
+--use synplify.attributes.all;
 
-library sb_ice40_components_syn;
-use sb_ice40_components_syn.components.all;
+--library sb_ice40_components_syn;
+--use sb_ice40_components_syn.components.all;
 
 use work.gpsdocfg_pkg.all;
+
 -- ----------------------------------------------------------------------------
 -- Entity declaration
 -- ----------------------------------------------------------------------------
@@ -105,10 +106,102 @@ architecture arch of LimePSB_RPCM_top is
    
    component rgb_io is
       port (
-         RGB : inout  std_logic_vector(2 downto 0);
-         rgb0     : out    std_logic;
-         rgb1     : out    std_logic;
-         rgb2     : out    std_logic
+         clk       : in    std_logic;
+         RGB       : in    std_logic_vector(2 downto 0);
+         rgb0      : out   std_logic;
+         rgb1      : out   std_logic;
+         rgb2_in   : in    std_logic;
+         rgb2_out  : out   std_logic
+      );
+   end component;
+
+   component SB_HFOSC is
+      port (
+         CLKHF   : out std_logic;
+         CLKHFEN :  in std_logic;
+         CLKHFPU :  in std_logic
+      );
+   end component;
+
+   component pps_detector is
+    port (
+        clk        : in  std_logic;
+        reset      : in  std_logic;
+        pps        : in  std_logic;
+        pps_active : out std_logic
+    );
+   end component;
+
+   component gpsdocfg is
+   port (
+      maddress    : in  std_logic_vector(9 downto 0);
+      mimo_en     : in  std_logic;
+      sdin        : in  std_logic;
+      sclk        : in  std_logic;
+      sen         : in  std_logic;
+      sdout       : out std_logic;
+      lreset      : in  std_logic;
+      mreset      : in  std_logic;
+      oen         : out std_logic;
+      to_gpsdocfg  : in  t_TO_GPSDOCFG;
+      from_gpsdocfg: out t_FROM_GPSDOCFG
+   );
+   end component;
+
+   component vctcxo_tamer is
+    port(
+        tune_ref           :   in  std_logic;
+        vctcxo_clock       :   in  std_logic;
+        mm_clock           :   in  std_logic;
+        mm_reset           :   in  std_logic;
+        mm_rd_req          :   in  std_logic;
+        mm_wr_req          :   in  std_logic;
+        mm_addr            :   in  std_logic_vector(7 downto 0);
+        mm_wr_data         :   in  std_logic_vector(7 downto 0);
+        mm_rd_data         :   out std_logic_vector(7 downto 0);
+        mm_wait_req        :   out std_logic := '0';
+        mm_irq             :   out std_logic := '0';
+        PPS_1S_TARGET       :   in std_logic_vector(31 downto 0);
+        PPS_1S_ERROR_TOL    :   in std_logic_vector(31 downto 0);
+        PPS_10S_TARGET      :   in std_logic_vector(31 downto 0);
+        PPS_10S_ERROR_TOL   :   in std_logic_vector(31 downto 0);
+        PPS_100S_TARGET     :   in std_logic_vector(31 downto 0);
+        PPS_100S_ERROR_TOL  :   in std_logic_vector(31 downto 0);
+        pps_1s_error       :   out std_logic_vector(31 downto 0);
+        pps_10s_error      :   out std_logic_vector(31 downto 0);
+        pps_100s_error     :   out std_logic_vector(31 downto 0);
+        accuracy           :   out std_logic_vector(3 downto 0);
+        state              :   out std_logic_vector(3 downto 0);
+        dac_tuned_val      :   out std_logic_vector(15 downto 0)
+    );
+   end component;
+
+   component neo430_top_avm is
+      port (
+        clk_i           : in  std_logic;
+        rst_i           : in  std_logic;
+        gpio_o          : out std_logic_vector(15 downto 0);
+        gpio_i          : in  std_logic_vector(15 downto 0);
+        pwm_o           : out std_logic_vector(03 downto 0);
+        freq_gen_o      : out std_logic_vector(02 downto 0);
+
+        uart_txd_o      : out std_logic;
+        uart_rxd_i      : in  std_logic;
+        spi_sclk_o      : out std_logic;
+        spi_mosi_o      : out std_logic;
+        spi_miso_i      : in  std_logic;
+        spi_cs_o        : out std_logic;
+        twi_sda_io      : inout std_logic;
+        twi_scl_io      : inout std_logic;
+        ext_irq_i       : in  std_logic_vector(07 downto 0);
+        ext_ack_o       : out std_logic_vector(07 downto 0);
+        avm_address     : out std_logic_vector(31 downto 0);
+        avm_readdata    : in  std_logic_vector(31 downto 0);
+        avm_writedata   : out std_logic_vector(31 downto 0);
+        avm_byteenable  : out std_logic_vector(03 downto 0);
+        avm_write       : out std_logic;
+        avm_read        : out std_logic;
+        avm_waitrequest : in  std_logic
       );
    end component;
 
@@ -183,12 +276,12 @@ begin
    clkhfpu  <= '1';
 
    HFOSC_inst : SB_HFOSC
-   generic map (
-      CLKHF_DIV    => "0b11"
-   )
+--   generic map (
+--      CLKHF_DIV    => "0b11"
+--   )
    port map (
       CLKHFEN  => clkhfen,
-      CLKHFPU  => clkhfpu, 
+      CLKHFPU  => clkhfpu,
       CLKHF    => clkhf
    );
 
@@ -222,7 +315,7 @@ por_rst_n <= por_vect(0) AND por_vect(1);
 -- ----------------------------------------------------------------------------
 -- RGB instance.
 -- ----------------------------------------------------------------------------
-   rgb_io_inst : entity work.rgb_io
+   rgb_io_inst : rgb_io
    port map(
       clk      => LMK10_CLK_OUT0,
       RGB(0)   => HW_VER(0),
@@ -235,11 +328,11 @@ por_rst_n <= por_vect(0) AND por_vect(1);
    );
 
 
-   pps_detector_inst : entity work.pps_detector
-      Generic map(
-          CLK_FREQ_HZ => 6_000_000, -- Nominal system clock frequency
-          TOLERANCE   => 5_000_000   -- Allow ±50% tolerance (adjust as needed)
-      )
+   pps_detector_inst : pps_detector
+--      Generic map(
+--          CLK_FREQ_HZ => 6_000_000, -- Nominal system clock frequency
+--          TOLERANCE   => 5_000_000   -- Allow ±50% tolerance (adjust as needed)
+--      )
       Port map(
           clk        => clkhf,            -- System clock
           reset      => NOT por_rst_n,    -- Reset signal
@@ -250,7 +343,7 @@ por_rst_n <= por_vect(0) AND por_vect(1);
 -- ----------------------------------------------------------------------------
 -- gpsdocfg SPI instance.
 -- ----------------------------------------------------------------------------
-   gpsdocfg_inst : entity work.gpsdocfg
+   gpsdocfg_inst : gpsdocfg
    port map(
       -- Address and location of this module
       -- Will be hard wired at the top level
@@ -285,33 +378,33 @@ por_rst_n <= por_vect(0) AND por_vect(1);
 -- ----------------------------------------------------------------------------
 -- NEO430 CPU
 -- ----------------------------------------------------------------------------
-   neo430_inst : entity work.neo430_top_avm
-   generic map(
-     -- general configuration --
-     CLOCK_SPEED  => 6000000,    -- main clock in Hz
-     IMEM_SIZE    => 5*1024,     -- internal IMEM size in bytes, max 48kB (default=4kB)
-     DMEM_SIZE    => 2*1024,     -- internal DMEM size in bytes, max 12kB (default=2kB)
-     -- additional configuration --
-     USER_CODE    => x"0000",    -- custom user code
-     -- module configuration --
-     MULDIV_USE   => false,   -- implement multiplier/divider unit? (default=true)
-     WB32_USE     => true,    -- implement WB32 unit? (default=true)
-     WDT_USE      => false,   -- implement WDT? (default=true)
-     GPIO_USE     => true,    -- implement GPIO unit? (default=true)
-     TIMER_USE    => false,   -- implement timer? (default=true)
-     UART_USE     => false,   -- implement UART? (default=true)
-     CRC_USE      => false,   -- implement CRC unit? (default=true)
-     CFU_USE      => false,   -- implement custom functions unit? (default=false)
-     PWM_USE      => false,   -- implement PWM controller?
-     TWI_USE      => false,   -- implement two wire serial interface? (default=true)
-     SPI_USE      => true,    -- implement SPI? (default=true)
-     TRNG_USE     => false,   -- implement TRNG? (default=false)
-     EXIRQ_USE    => true,    -- implement EXIRQ? (default=true)
-     FREQ_GEN_USE => false,   -- implement FREQ_GEN? (default=true)
-     -- boot configuration --
-     BOOTLD_USE   => false,   -- implement and use bootloader? (default=true)
-     IMEM_AS_ROM  => true    -- implement IMEM as read-only memory? (default=false)
-   )
+   neo430_inst : neo430_top_avm
+--   generic map(
+--     -- general configuration --
+--     CLOCK_SPEED  => 6000000,    -- main clock in Hz
+--     IMEM_SIZE    => 5*1024,     -- internal IMEM size in bytes, max 48kB (default=4kB)
+--     DMEM_SIZE    => 2*1024,     -- internal DMEM size in bytes, max 12kB (default=2kB)
+--     -- additional configuration --
+--     USER_CODE    => x"0000",    -- custom user code
+--     -- module configuration --
+--     MULDIV_USE   => false,   -- implement multiplier/divider unit? (default=true)
+--     WB32_USE     => true,    -- implement WB32 unit? (default=true)
+--     WDT_USE      => false,   -- implement WDT? (default=true)
+--     GPIO_USE     => true,    -- implement GPIO unit? (default=true)
+--     TIMER_USE    => false,   -- implement timer? (default=true)
+--     UART_USE     => false,   -- implement UART? (default=true)
+--     CRC_USE      => false,   -- implement CRC unit? (default=true)
+--     CFU_USE      => false,   -- implement custom functions unit? (default=false)
+--     PWM_USE      => false,   -- implement PWM controller?
+--     TWI_USE      => false,   -- implement two wire serial interface? (default=true)
+--     SPI_USE      => true,    -- implement SPI? (default=true)
+--     TRNG_USE     => false,   -- implement TRNG? (default=false)
+--     EXIRQ_USE    => true,    -- implement EXIRQ? (default=true)
+--     FREQ_GEN_USE => false,   -- implement FREQ_GEN? (default=true)
+--     -- boot configuration --
+--     BOOTLD_USE   => false,   -- implement and use bootloader? (default=true)
+--     IMEM_AS_ROM  => true    -- implement IMEM as read-only memory? (default=false)
+--   )
    port map(
      -- global control --
      clk_i           => clkhf,      -- global clock, rising edge
@@ -385,7 +478,7 @@ por_rst_n <= por_vect(0) AND por_vect(1);
                         RPI_SYNC_IN    when from_gpsdocfg.IICFG_TPULSE_SEL = "10" else GNSS_TPULSE;
    vctcxo_clk        <= LMK10_CLK_OUT0 when from_gpsdocfg.IICFG_CLK_SEL = '1'     else LMKRF_CLK_OUT4;
 
-   vctcxo_tamer_inst : entity work.vctcxo_tamer
+   vctcxo_tamer_inst : vctcxo_tamer
       port map(
          -- Physical Interface
          tune_ref           => tpulse_internal,
