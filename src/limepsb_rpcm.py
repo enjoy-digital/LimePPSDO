@@ -186,6 +186,23 @@ class BaseSoC(SoCMini):
         self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mem_package.vhd")
         self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
 
+        # VCXO Tamer VHD2V Converter.
+        self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
+            top_entity    = "vctcxo_tamer",
+            build_dir     = os.path.abspath(os.path.dirname(__file__)),
+            work_package  = "work",
+            force_convert = True,
+            add_instance  = False,
+            params        = {}
+        )
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/edge_detector.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/handshake.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
+
+
 # Build --------------------------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on LimePSB RPCM Board")
