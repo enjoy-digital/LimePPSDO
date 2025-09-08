@@ -164,7 +164,10 @@ class BaseSoC(SoCMini):
             work_package  = "work",
             force_convert = True,
             add_instance  = False,
-            params        = {}
+            params        = dict(
+                p_CLK_FREQ_HZ = 6000000,
+                p_TOLERANCE   = 5000000,
+            )
         )
         self.vhd2v_converter_pps_detector.add_source("hdl/pps_detector/pps_detector.vhd")
         self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
@@ -209,7 +212,32 @@ class BaseSoC(SoCMini):
             work_package  = "neo430",
             force_convert = True,
             add_instance  = False,
-            params        = {}
+            params        = dict(
+                # general configuration
+                p_CLOCK_SPEED  = 6000000,
+                p_IMEM_SIZE    = 5*1024,
+                p_DMEM_SIZE    = 2*1024,
+                # additional configuration
+                #p_USER_CODE    = "0000", # FIXME.
+                # module configuration
+                p_MULDIV_USE   = False,
+                p_WB32_USE     = True,
+                p_WDT_USE      = False,
+                p_GPIO_USE     = True,
+                p_TIMER_USE    = False,
+                p_UART_USE     = False,
+                p_CRC_USE      = False,
+                p_CFU_USE      = False,
+                p_PWM_USE      = False,
+                p_TWI_USE      = False,
+                p_SPI_USE      = True,
+                p_TRNG_USE     = False,
+                p_EXIRQ_USE    = True,
+                p_FREQ_GEN_USE = False,
+                # boot configuration
+                p_BOOTLD_USE   = False,
+                p_IMEM_AS_ROM  = True
+            )
         )
         self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_addr_gen.vhd")
         self.vhd2v_converter_gpsdocfg.add_source("neo430/rtl/core/neo430_alu.vhd")
