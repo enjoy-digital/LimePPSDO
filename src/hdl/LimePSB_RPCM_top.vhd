@@ -50,7 +50,7 @@ entity LimePSB_RPCM_top is
       FPGA_SPI0_SCLK    : out    std_logic;
       FPGA_SPI0_MOSI    : out    std_logic;
       FPGA_SPI0_DAC_SS  : out    std_logic;
-      FPGA_LED_R        : out    std_logic;
+      FPGA_LED_R        : inout  std_logic;
       -- GNSS
       GNSS_EXTINT       : out    std_logic;
       GNSS_RESET        : out    std_logic;
@@ -103,6 +103,25 @@ architecture arch of LimePSB_RPCM_top is
    signal tpulse_internal : std_logic;
 
    signal neo430_gpio   : std_logic_vector(15 downto 0);
+
+   component SB_IO
+      generic (
+         PIN_TYPE    : bit_vector(5 downto 0);
+         NEG_TRIGGER : bit
+      );
+      port (
+         D_OUT_1           : in std_logic;
+         D_OUT_0           : in std_logic;
+         CLOCK_ENABLE     : in std_logic;
+         LATCH_INPUT_VALUE : in std_logic;
+         INPUT_CLK        : in std_logic;
+         D_IN_1            : out std_logic;
+         D_IN_0            : out std_logic;
+         OUTPUT_ENABLE    : in std_logic := 'H';
+         OUTPUT_CLK       : in std_logic;
+         PACKAGE_PIN      : inout std_logic
+      );
+   end component;
    
 --   component rgb_io is
 --      port (
@@ -327,6 +346,26 @@ por_rst_n <= por_vect(0) AND por_vect(1);
 --      rgb2_out => open
 --   );
 
+   hw_ver_sig <= HW_VER; -- FIXME: SB_IO_OD required?
+
+
+       rgb_io : SB_IO
+         generic map (
+            PIN_TYPE    => "011001",
+            NEG_TRIGGER => '0'
+         )
+         port map (
+            PACKAGE_PIN      => FPGA_LED_R,
+            LATCH_INPUT_VALUE => '0',
+            CLOCK_ENABLE     => '0',
+            INPUT_CLK        => '0',
+            OUTPUT_CLK       => '0',
+            OUTPUT_ENABLE    => open,
+            D_OUT_0           => NOT (GNSS_TPULSE AND from_gpsdocfg.IICFG_EN),
+            D_OUT_1           => '0',
+            D_IN_0            => open,
+            D_IN_1            => open
+         );
 
    pps_detector_inst : pps_detector
 --      Generic map(

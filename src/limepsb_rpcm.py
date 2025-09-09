@@ -161,6 +161,19 @@ class BaseSoC(SoCMini):
 
             flatten_source = False
 
+            # RGB IO VHD2V Converter.
+            # -----------------------------
+#            self.vhd2v_converter_rgb_io = VHD2VConverter(self.platform,
+#                top_entity     = "rgb_io",
+#                build_dir      = os.path.abspath(os.path.dirname(__file__)),
+#                work_package   = "work",
+#                force_convert  = True,
+#                add_instance   = False,
+#                flatten_source = flatten_source,
+#            )
+#            self.vhd2v_converter_rgb_io.add_source("hdl/general/rgb_io.vhd")
+#            self.vhd2v_converter_rgb_io._ghdl_opts.append("-fsynopsys")
+
             # PPS Detector VHD2V Converter.
             # -----------------------------
             self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
