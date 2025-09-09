@@ -158,14 +158,18 @@ class BaseSoC(SoCMini):
                     self.platform.add_source(vhdl_source)
 
         if use_ghdl:
+
+            flatten_source = False
+
             # PPS Detector VHD2V Converter.
+            # -----------------------------
             self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
                 top_entity     = "pps_detector",
                 build_dir      = os.path.abspath(os.path.dirname(__file__)),
                 work_package   = "work",
                 force_convert  = True,
                 add_instance   = False,
-                flatten_source = False,
+                flatten_source = flatten_source,
                 params         = dict(
                     p_CLK_FREQ_HZ = 6000000,
                     p_TOLERANCE   = 5000000,
@@ -175,13 +179,14 @@ class BaseSoC(SoCMini):
             self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
 
             # GPSDOCFG VHD2V Converter.
+            # -------------------------
             self.vhd2v_converter_gpsdocfg = VHD2VConverter(self.platform,
                 top_entity     = "gpsdocfg",
                 build_dir      = os.path.abspath(os.path.dirname(__file__)),
                 work_package   = "work",
                 force_convert  = True,
                 add_instance   = False,
-                flatten_source = False,
+                flatten_source = flatten_source,
                 params         = {}
             )
             self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/revisions.vhd")
@@ -193,16 +198,17 @@ class BaseSoC(SoCMini):
             self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
 
             # VCXO Tamer VHD2V Converter.
+            # ---------------------------
             self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
                 top_entity     = "vctcxo_tamer",
                 build_dir      = os.path.abspath(os.path.dirname(__file__)),
                 work_package   = "work",
                 force_convert  = True,
                 add_instance   = False,
-                flatten_source = False,
+                flatten_source = flatten_source,
                 params         = {}
             )
-            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector.vhd")
+            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector_fixed.vhd")
             self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/handshake.vhd")
             self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
             self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
@@ -210,13 +216,14 @@ class BaseSoC(SoCMini):
             self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
 
             # Neo430 VHD2V Converter.
+            # -----------------------
             self.vhd2v_converter_neo430 = VHD2VConverter(self.platform,
                 top_entity     = "neo430_top_avm",
                 build_dir      = os.path.abspath(os.path.dirname(__file__)),
                 work_package   = "work",
                 force_convert  = True,
                 add_instance   = False,
-                flatten_source = False,
+                flatten_source = flatten_source,
                 params         = dict(
                     # general configuration
                     p_CLOCK_SPEED  = 6000000,
@@ -274,18 +281,21 @@ class BaseSoC(SoCMini):
             self.vhd2v_converter_neo430.add_source("neo430/rtl/top_templates/neo430_top_avm.vhd")
 
             # LimePSB_RPCM_top VHD2V Converter.
+            # ---------------------------------
             self.vhd2v_converter_limepsb_rpcm_top = VHD2VConverter(self.platform,
                 top_entity     = "LimePSB_RPCM_top",
                 build_dir      = os.path.abspath(os.path.dirname(__file__)),
                 work_package   = "work",
                 force_convert  = True,
                 add_instance   = False,
-                flatten_source = False,
+                flatten_source = flatten_source,
                 params         = {}
             )
             self.vhd2v_converter_limepsb_rpcm_top.add_source("hdl/spi/gpsdocfg_pkg.vhd")
             self.vhd2v_converter_limepsb_rpcm_top.add_source("hdl/LimePSB_RPCM_top.vhd")
             self.vhd2v_converter_limepsb_rpcm_top._ghdl_opts.append("-fsynopsys")
+
+            self.platform.toolchain._pnr_opts += " --ignore-loops"
 
 # Build --------------------------------------------------------------------------------------------
 def main():
