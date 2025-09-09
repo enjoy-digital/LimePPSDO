@@ -104,16 +104,16 @@ architecture arch of LimePSB_RPCM_top is
 
    signal neo430_gpio   : std_logic_vector(15 downto 0);
    
-   component rgb_io is
-      port (
-         clk       : in    std_logic;
-         RGB       : in    std_logic_vector(2 downto 0);
-         rgb0      : out   std_logic;
-         rgb1      : out   std_logic;
-         rgb2_in   : in    std_logic;
-         rgb2_out  : out   std_logic
-      );
-   end component;
+--   component rgb_io is
+--      port (
+--         clk       : in    std_logic;
+--         RGB       : in    std_logic_vector(2 downto 0);
+--         rgb0      : out   std_logic;
+--         rgb1      : out   std_logic;
+--         rgb2_in   : in    std_logic;
+--         rgb2_out  : out   std_logic
+--      );
+--   end component;
 
    component SB_HFOSC is
       port (
@@ -315,17 +315,17 @@ por_rst_n <= por_vect(0) AND por_vect(1);
 -- ----------------------------------------------------------------------------
 -- RGB instance.
 -- ----------------------------------------------------------------------------
-   rgb_io_inst : rgb_io
-   port map(
-      clk      => LMK10_CLK_OUT0,
-      RGB(0)   => HW_VER(0),
-      RGB(1)   => HW_VER(1),
-      RGB(2)   => FPGA_LED_R,
-      rgb0     => hw_ver_sig(0),
-      rgb1     => hw_ver_sig(1),
-      rgb2_in  => NOT (GNSS_TPULSE AND from_gpsdocfg.IICFG_EN),
-      rgb2_out => open
-   );
+--   rgb_io_inst : rgb_io
+--   port map(
+--      clk      => LMK10_CLK_OUT0,
+--      RGB(0)   => HW_VER(0),
+--      RGB(1)   => HW_VER(1),
+--      RGB(2)   => FPGA_LED_R,
+--      rgb0     => hw_ver_sig(0),
+--      rgb1     => hw_ver_sig(1),
+--      rgb2_in  => NOT (GNSS_TPULSE AND from_gpsdocfg.IICFG_EN),
+--      rgb2_out => open
+--   );
 
 
    pps_detector_inst : pps_detector
