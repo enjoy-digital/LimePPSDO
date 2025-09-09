@@ -201,12 +201,12 @@ class BaseSoC(SoCMini):
             flatten_source = False,
             params         = {}
         )
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/edge_detector.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/handshake.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/handshake.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
 
         # Neo430 VHD2V Converter.
         self.vhd2v_converter_neo430 = VHD2VConverter(self.platform,
@@ -243,7 +243,6 @@ class BaseSoC(SoCMini):
                 p_IMEM_AS_ROM  = True
             )
         )
-
         self.vhd2v_converter_neo430.add_libraries([("neo430", "neo430/rtl/core/neo430_package.vhd")])
         self.vhd2v_converter_neo430.add_libraries([("neo430", "neo430/rtl/core/neo430_sysconfig.vhd")])
         self.vhd2v_converter_neo430.add_libraries([("neo430", "neo430/rtl/core/neo430_application_image.vhd")])
