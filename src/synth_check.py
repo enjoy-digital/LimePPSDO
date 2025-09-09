@@ -57,9 +57,12 @@ synth_ice40 -dsp -top {top_module}
         temp_ys.write(ys_script)
         temp_ys_path = temp_ys.name
 
+    log_filename = f"{os.path.splitext(filename)[0]}_yosys.log"
+
     try:
-        # Run Yosys and capture output
-        result = subprocess.run(['yosys', '-s', temp_ys_path], capture_output=True, text=True, timeout=60)
+        # Run Yosys and capture output, with -l for log
+        result = subprocess.run(['yosys', '-l', log_filename, '-s', temp_ys_path], capture_output=True, text=True, timeout=60)
+        print(f"Yosys synthesis output dumped to {log_filename}")
 
         # Check for the specific error message about async set and reset
         error_keywords = [
@@ -76,6 +79,100 @@ synth_ice40 -dsp -top {top_module}
                 found_errors.extend(error_lines)
 
         if found_errors:
+            # Extract problematic FF names
+            ff_names = set()
+            ff_pattern = re.compile(r'FF .*?(\$\S+) \(type')
+            for line in found_errors:
+                matches = ff_pattern.findall(line)
+                ff_names.update(matches)
+
+            print(f"Extracted problematic FF names: {', '.join(ff_names)}")
+
+            if ff_names:
+                # Run a second Yosys session for analysis: run passes up to before dfflegalize
+                analysis_script = f"""
+verilog_defaults -push
+verilog_defaults -add -defer
+read_verilog -lib +/ice40/cells_sim.v
+{read_cmd}
+verilog_defaults -pop
+attrmap -tocase keep -imap keep="true" keep=1 -imap keep="false" keep=0 -remove keep=0
+
+hierarchy -top {top_module} -check
+proc
+flatten
+opt_expr
+opt_clean
+check -noinit
+opt
+wreduce
+peepopt
+opt_clean
+share
+techmap -map +/techmap.v
+opt -fast
+memory -nomap
+opt -full
+fsm
+opt -full
+memory_map
+opt -full
+techmap -map +/techmap.v
+opt -fast
+write_ilang {os.path.splitext(filename)[0]}_debug.ilang
+"""
+
+                # For each FF, select the cell (use a: for name matching)
+                for ff in ff_names:
+                    # Sanitize ff name for filename
+                    ff_safe = ff.replace('$', '_').replace('.', '_').replace(':', '_').replace('/', '_')
+                    # Escape for Yosys select
+                    ff_escaped = ff.replace('$', '\\$').replace('.', '\\.').replace(':', '\\:').replace('/', '\\ /')
+                    analysis_script += f"""
+select a:name=*{ff_escaped}*
+select %ci:* %ci:* %ci:* %ci:*  # Deep trace inputs (depth 4)
+dump -outfile {os.path.splitext(filename)[0]}_{ff_safe}_analysis.txt
+"""
+
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.ys', delete=False) as temp_analysis_ys:
+                    temp_analysis_ys.write(analysis_script)
+                    temp_analysis_path = temp_analysis_ys.name
+
+                analysis_result = subprocess.run(['yosys', '-s', temp_analysis_path], capture_output=True, text=True, timeout=60)
+                if analysis_result.returncode != 0:
+                    print(f"Analysis Yosys run failed: {analysis_result.stderr[:500]}...")
+                else:
+                    print("Analysis run successful.")
+
+                os.unlink(temp_analysis_path)
+
+                analysis_summary = []
+                for ff in ff_names:
+                    ff_safe = ff.replace('$', '_').replace('.', '_').replace(':', '_').replace('/', '_')
+                    analysis_file = f"{os.path.splitext(filename)[0]}_{ff_safe}_analysis.txt"
+                    if os.path.exists(analysis_file):
+                        with open(analysis_file, 'r') as af:
+                            content = af.read()
+                            # Python parsing: Find all unique \src "file:line"
+                            src_matches = set(re.findall(r'attribute \\src "([^"]+)"', content))
+                            if src_matches:
+                                locations = ', '.join(sorted(src_matches))
+                                analysis_summary.append(f"For FF {ff}: Inferred from source locations: {locations}")
+                                analysis_summary.append("Likely cause: always block with multiple async edges (e.g., posedge clk or posedge rst or posedge set) or non-constant async load. Rewrite as synchronous reset (move reset inside clocked if).")
+                            else:
+                                analysis_summary.append(f"For FF {ff}: No \src found in chain; trace ports like \ARST, \ASET, \ALOAD in {analysis_file} or grep ILANG for '{ff}' and connected signals to find originating always block.")
+
+                ilang_file = f"{os.path.splitext(filename)[0]}_debug.ilang"
+                print(f"ILANG dump saved to {ilang_file}")
+                for ff in ff_names:
+                    ff_safe = ff.replace('$', '_').replace('.', '_').replace(':', '_').replace('/', '_')
+                    print(f"Cell analysis for {ff} dumped to {os.path.splitext(filename)[0]}_{ff_safe}_analysis.txt")
+
+                if analysis_summary:
+                    return f"Error detected in {filename}:{newline}{newline.join(found_errors)}{newline}Automated analysis:{newline}{newline.join(analysis_summary)}{newline}To fix: Open flagged file:line, remove async edges from sensitivity list, make resets sync."
+                else:
+                    return f"Error detected in {filename}:{newline}{newline.join(found_errors)}{newline}No automated source locations found (optimized away); manually grep ILANG for FF name and trace \ARST/\ASET signals to find originating always block."
+
             return f"Error detected in {filename}:{newline}{newline.join(found_errors)}"
 
         if result.returncode != 0:
@@ -108,4 +205,4 @@ if __name__ == "__main__":
         else:
             print(f"File not found: {file}")
             print("-" * 80)
-    print("\nChecks complete. If errors are found, inspect the reported file for always blocks with multiple async edges (e.g., posedge clk or posedge rst or posedge set).")
+    print("\nChecks complete. If errors are found, the script has analyzed and reported source locations above. Inspect flagged always blocks for async issues.")
