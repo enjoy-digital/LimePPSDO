@@ -44,12 +44,26 @@ class BaseSoC(SoCMini):
 
         # LED Chaser -------------------------------------------------------------------------------
         if with_led_chaser:
-            led_pads = platform.request("fpga_led_r")
-            self.comb += led_pads.eq(0)
-            #self.leds = LedChaser(
-            #    pads         = led_pads,
-            #    sys_clk_freq = sys_clk_freq,
-            #)
+            led_o = Signal()
+            self.leds = LedChaser(
+                pads         = led_o,
+                sys_clk_freq = sys_clk_freq,
+            )
+        self.specials += Instance("SB_IO_OD",
+            p_PIN_TYPE          = "011001",  # Combinatorial output, combinatorial OE, no input (adjust to "101001" if you later need input)
+            p_NEG_TRIGGER       = 0,
+
+            i_PACKAGEPIN      = platform.request("fpga_led_r"),
+            i_LATCHINPUTVALUE = 0,
+            i_CLOCKENABLE     = 0,
+            i_INPUTCLK        = 0,
+            i_OUTPUTCLK       = 0,
+            i_OUTPUTENABLE    = 1,
+            i_DOUT0           = led_o,
+            i_DOUT1           = 0,
+            o_DIN0            = Open(),
+            o_DIN1            = Open(),
+        )
 
         counter = Signal(16)
         self.sync += counter.eq(counter + 1)
