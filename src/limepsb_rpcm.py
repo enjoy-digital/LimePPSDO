@@ -121,6 +121,7 @@ class BaseSoC(SoCMini):
         ]
 
         # GPIO Toggling (Debug) --------------------------------------------------------------------
+
         counter = Signal(16)
         self.sync += counter.eq(counter + 1)
         self.comb += platform.request("rpi_uart0_rx").eq(ClockSignal("sys"))
