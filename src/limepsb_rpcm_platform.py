@@ -20,11 +20,11 @@ io = [
 
     # BOM/HW Version.
     # ---------------
-    ("bom_ver",          0, Pins("26"), IOStandard("LVCMOS33")),
-    ("bom_ver",          1, Pins("19"), IOStandard("LVCMOS33")),
-    ("bom_ver",          2, Pins("18"), IOStandard("LVCMOS33")),
-    ("hw_ver",           0, Pins("41"), IOStandard("LVCMOS33")),
-    ("hw_ver",           1, Pins("40"), IOStandard("LVCMOS33")),
+    ("version", 0,
+        Subsignal("bom", Pins("26 19 18")),
+        Subsignal("hw",  Pins("41 40")),
+        IOStandard("LVCMOS33")
+    ),
 
     # Rpi.
     # ----

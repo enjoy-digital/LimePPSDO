@@ -97,6 +97,29 @@ class BaseSoC(SoCMini):
 
         self.crg = _CRG(platform, sys_clk_freq)
 
+        # BOM/HW Version ---------------------------------------------------------------------------
+
+        # Get BOM/HW Version from IOs.
+        bom_version  = Signal(3)
+        hw_version   = Signal(2)
+        version_pads = platform.request("version")
+        self.comb += [
+            bom_version.eq(version_pads.bom),
+            hw_version.eq(version_pads.hw),
+        ]
+
+        # TDD Redirection --------------------------------------------------------------------------
+
+        pcie_uim_pad       = platform.request("pcie_uim")
+        fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
+        self.comb += [
+            fpga_rf_sw_tdd_pad.eq(pcie_uim_pad),
+            # On hw_version = 0b01, invert TDD signal.
+            If(hw_version == 0b01,
+                fpga_rf_sw_tdd_pad.eq(~pcie_uim_pad)
+            )
+        ]
+
         # GPIO Toggling (Debug) --------------------------------------------------------------------
         counter = Signal(16)
         self.sync += counter.eq(counter + 1)
