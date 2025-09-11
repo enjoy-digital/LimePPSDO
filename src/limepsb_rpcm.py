@@ -125,6 +125,8 @@ class BaseSoC(SoCMini):
         counter = Signal(16)
         self.sync += counter.eq(counter + 1)
         self.comb += platform.request("rpi_uart0_rx").eq(ClockSignal("sys"))
+        #self.comb += platform.request("fpga_gpio", 0).eq(counter[0])
+        #self.comb += platform.request("fpga_gpio", 1).eq(counter[1])
 
         # GNSS -------------------------------------------------------------------------------------
 
@@ -162,22 +164,28 @@ class BaseSoC(SoCMini):
             i_RPI_SYNC_OUT      = platform.request("rpi_sync_out"),
             i_RPI_SPI1_SCLK     = platform.request("rpi_spi1_sclk"),
             i_RPI_SPI1_MOSI     = platform.request("rpi_spi1_mosi"),
-            o_RPI_SPI1_MISO     = platform.request("rpi_spi1_miso"),
+            #o_RPI_SPI1_MISO     = platform.request("rpi_spi1_miso"), # FIXME.
             i_RPI_SPI1_SS1      = platform.request("rpi_spi1_ss1"),
             i_RPI_SPI1_SS2      = platform.request("rpi_spi1_ss2"),
 
             # FPGA
-            io_FPGA_GPIO        = platform.request("fpga_gpio"),
+            #o_FPGA_SYNC_OUT     = platform.request("fpga_sync_out"),
+            #o_FPGA_SPI0_SCLK    = platform.request("fpga_spi0_sclk"),
+            #o_FPGA_SPI0_MOSI    = platform.request("fpga_spi0_mosi"),
+            #o_FPGA_SPI0_DAC_SS  = platform.request("fpga_spi0_dac_ss"),
+
+            io_FPGA_GPIO        = Open(),
             io_FPGA_CFG_SPI_SCK = platform.request("fpga_cfg_spi_sck"),
             io_FPGA_CFG_SPI_SI  = platform.request("fpga_cfg_spi_si"),
             io_FPGA_CFG_SPI_SO  = platform.request("fpga_cfg_spi_so"),
             i_FPGA_CFG_SPI_CSN  = platform.request("fpga_cfg_spi_csn"),
             io_FPGA_I2C_SCL     = platform.request("fpga_i2c_scl"),
             io_FPGA_I2C_SDA     = platform.request("fpga_i2c_sda"),
-            o_FPGA_SYNC_OUT     = platform.request("fpga_sync_out"),
-            o_FPGA_SPI0_SCLK    = platform.request("fpga_spi0_sclk"),
-            o_FPGA_SPI0_MOSI    = platform.request("fpga_spi0_mosi"),
-            o_FPGA_SPI0_DAC_SS  = platform.request("fpga_spi0_dac_ss"),
+            o_FPGA_SYNC_OUT     = Open(),
+            o_FPGA_SPI0_SCLK    = Open(),
+            o_FPGA_SPI0_MOSI    = Open(),
+            o_FPGA_SPI0_DAC_SS  = Open(),
+
         )
 
         # PPS Detector VHD2V Converter.
