@@ -12,11 +12,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
---library synplify;
---use synplify.attributes.all;
-
---library sb_ice40_components_syn;
---use sb_ice40_components_syn.components.all;
 
 use work.gpsdocfg_pkg.all;
 
@@ -25,37 +20,35 @@ use work.gpsdocfg_pkg.all;
 -- ----------------------------------------------------------------------------
 entity LimePSB_RPCM_top is
    port (
-      LMK10_CLK_OUT0    : in     std_logic;
-      LMKRF_CLK_OUT4    : in     std_logic;
-      -- RPI   
-      RPI_SYNC_IN       : inout  std_logic;
-      RPI_SYNC_OUT      : in     std_logic;
-      RPI_SPI1_SCLK     : in     std_logic;
-      RPI_SPI1_MOSI     : in     std_logic;
-      RPI_SPI1_MISO     : out    std_logic;
-      RPI_SPI1_SS1      : in     std_logic;
-      RPI_SPI1_SS2      : in     std_logic;
-      RPI_UART0_TX      : in     std_logic;
-      RPI_UART0_RX      : out    std_logic;
-      --FPGA 
-      FPGA_GPIO         : inout  std_logic_vector(1 downto 0); 
-      FPGA_CFG_SPI_SCK  : inout  std_logic;
-      FPGA_CFG_SPI_SI   : inout  std_logic;
-      FPGA_CFG_SPI_SO   : inout  std_logic;
-      FPGA_CFG_SPI_CSN  : in     std_logic;
-      FPGA_RF_SW_TDD    : out    std_logic;
-      FPGA_I2C_SCL      : inout  std_logic;
-      FPGA_I2C_SDA      : inout  std_logic;
-      FPGA_SYNC_OUT     : out    std_logic;
-      FPGA_SPI0_SCLK    : out    std_logic;
-      FPGA_SPI0_MOSI    : out    std_logic;
-      FPGA_SPI0_DAC_SS  : out    std_logic;
-      FPGA_LED_R        : inout  std_logic;
-      -- MISC
-      PCIE_UIM          : in     std_logic;
-      EN_CM5_USB3       : in     std_logic;
-      BOM_VER           : in     std_logic_vector(2 downto 0);
-      HW_VER            : in     std_logic_vector(1 downto 0)
+      -- Sys Clk/Rst.
+      SYS_CLK          : in std_logic;
+      SYS_RST_N        : in std_logic;
+
+      -- RF Clks.
+      LMK10_CLK_OUT0   : in     std_logic;
+      LMKRF_CLK_OUT4   : in     std_logic;
+
+      -- RPI
+      RPI_SYNC_IN      : inout  std_logic;
+      RPI_SYNC_OUT     : in     std_logic;
+      RPI_SPI1_SCLK    : in     std_logic;
+      RPI_SPI1_MOSI    : in     std_logic;
+      RPI_SPI1_MISO    : out    std_logic;
+      RPI_SPI1_SS1     : in     std_logic;
+      RPI_SPI1_SS2     : in     std_logic;
+
+      --FPGA
+      FPGA_GPIO        : inout  std_logic_vector(1 downto 0);
+      FPGA_CFG_SPI_SCK : inout  std_logic;
+      FPGA_CFG_SPI_SI  : inout  std_logic;
+      FPGA_CFG_SPI_SO  : inout  std_logic;
+      FPGA_CFG_SPI_CSN : in     std_logic;
+      FPGA_I2C_SCL     : inout  std_logic;
+      FPGA_I2C_SDA     : inout  std_logic;
+      FPGA_SYNC_OUT    : out    std_logic;
+      FPGA_SPI0_SCLK   : out    std_logic;
+      FPGA_SPI0_MOSI   : out    std_logic;
+      FPGA_SPI0_DAC_SS : out    std_logic;
    );
 end LimePSB_RPCM_top;
 
@@ -63,34 +56,13 @@ end LimePSB_RPCM_top;
 -- Architecture
 -- ----------------------------------------------------------------------------
 architecture arch of LimePSB_RPCM_top is
---declare signals,  components here
-   constant c_GPSDOCFG_START_ADDR : integer := 0;  
 
-   signal clkhfen       : std_logic := '1';
-   signal clkhfpu       : std_logic := '1';
-   signal clkhf         : std_logic;
-
-   signal clklfen       : std_logic := '1';
-   signal clklfpu       : std_logic := '1';
-   signal clklf         : std_logic;
-
-   signal por_vect      : std_logic_vector(1 downto 0) :=(others=>'0');
-   signal por_rst_n     : std_logic := '0';
-
-   --signal beat_cnt      : unsigned(8 downto 0);
-   --signal beat          : std_logic;
-  
+   constant c_GPSDOCFG_START_ADDR : integer := 0;
 
    signal to_gpsdocfg      : t_TO_GPSDOCFG;
    signal from_gpsdocfg    : t_FROM_GPSDOCFG;
    signal rpi_spi1_miso_o  : std_logic;
    signal gpsdocfg_oen     : std_logic;
-
-   signal fpga_gpio_reg : std_logic_vector (FPGA_GPIO'LENGTH-1 downto 0);
-   signal bom_ver_sig   : std_logic_vector(2 downto 0);
-   signal bom_ver_reg   : std_logic_vector(2 downto 0);
-   signal hw_ver_sig    : std_logic_vector(1 downto 0);
-   signal en_cm5_usb3_reg : std_logic;
 
    signal tpulse_internal : std_logic;
 
@@ -179,9 +151,6 @@ architecture arch of LimePSB_RPCM_top is
    end component;
 
    --Testing temp
-   signal ad5662_wr : std_logic;
-   signal ad5662_d  : std_logic_vector(15 downto 0);
-
    signal neo430_avm_address     :  std_logic_vector(31 downto 0);
    signal neo430_avm_readdata    :  std_logic_vector(31 downto 0);
    signal neo430_avm_writedata   :  std_logic_vector(31 downto 0);
@@ -228,8 +197,8 @@ begin
 --          TOLERANCE   => 5_000_000   -- Allow ±50% tolerance (adjust as needed)
 --      )
       Port map(
-          clk        => clkhf,            -- System clock
-          reset      => NOT por_rst_n,    -- Reset signal
+          clk        => SYS_CLK,            -- System clock
+          reset      => NOT SYS_RST_N,    -- Reset signal
           pps        => tpulse_internal,  -- 1PPS input signal
           pps_active => tpulse_active     -- Indicates if PPS is active
       );
@@ -249,8 +218,8 @@ begin
       sen            => RPI_SPI1_SS1,
       sdout          => rpi_spi1_miso_o,  
       -- Signals coming from the pins or top level serial interface
-      lreset         => not por_rst_n,   -- Logic reset signal, resets logic cells only  (use only one reset)
-      mreset         => not por_rst_n,   -- Memory reset signal, resets configuration memory only (use only one reset)      
+      lreset         => not SYS_RST_N,   -- Logic reset signal, resets logic cells only  (use only one reset)
+      mreset         => not SYS_RST_N,   -- Memory reset signal, resets configuration memory only (use only one reset)
       oen            => gpsdocfg_oen,
       --stateo         => open,      
       to_gpsdocfg    => to_gpsdocfg,
@@ -301,8 +270,8 @@ begin
 --   )
    port map(
      -- global control --
-     clk_i           => clkhf,      -- global clock, rising edge
-     rst_i           => por_rst_n,  -- global reset, async, low-active
+     clk_i           => SYS_CLK,      -- global clock, rising edge
+     rst_i           => SYS_RST_N,  -- global reset, async, low-active
      -- GPIO --
      gpio_o          => neo430_gpio,   -- parallel output
      gpio_i          => neo430_gpio_i, -- parallel input
@@ -340,12 +309,12 @@ begin
    );
 
 
-   process (clkhf, por_rst_n)
+   process (SYS_CLK, SYS_RST_N)
    begin
-      if por_rst_n = '0' then 
+      if SYS_RST_N = '0' then
          vctcxo_tamer_mm_irq_reg <= '0';
          neo430_ext_irq(0)       <= '0';
-      elsif (rising_edge(clkhf)) then
+      elsif (rising_edge(SYS_CLK)) then
          vctcxo_tamer_mm_irq_reg <= vctcxo_tamer_mm_irq;
    
          if neo430_ext_irq_ack(0) = '1'  then 
@@ -380,8 +349,8 @@ begin
          --vctcxo_clock       => LMKRF_CLK_OUT4,
          
          -- Avalon-MM Interface
-         mm_clock           => clkhf,
-         mm_reset           => not por_rst_n,
+         mm_clock           => SYS_CLK,
+         mm_reset           => not SYS_RST_N,
          mm_rd_req          => neo430_avm_read,
          mm_wr_req          => neo430_avm_write,
          mm_addr            => neo430_avm_address(7 downto 0),
