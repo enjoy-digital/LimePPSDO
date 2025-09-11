@@ -98,7 +98,7 @@ class Platform(LatticeiCE40Platform):
     default_clk_period = 1e9/10e9
 
     def __init__(self, toolchain="icestorm"):
-        LatticeiCE40Platform.__init__(self, "ice40-up5k-sg48", io, toolchain=toolchain)
+        LatticeiCE40Platform.__init__(self, "ice40-u4k-sg48", io, toolchain=toolchain)
 
     def create_programmer(self):
         return IceStormProgrammer()

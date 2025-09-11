@@ -108,6 +108,13 @@ class BaseSoC(SoCMini):
             hw_version.eq(version_pads.hw),
         ]
 
+        # Led --------------------------------------------------------------------------------------
+
+        self.leds = LedChaser(
+            pads         = platform.request_all("fpga_led_r"),
+            sys_clk_freq = sys_clk_freq
+        )
+
         # TDD Redirection --------------------------------------------------------------------------
 
         pcie_uim_pad       = platform.request("pcie_uim")
@@ -124,29 +131,27 @@ class BaseSoC(SoCMini):
 
         counter = Signal(16)
         self.sync += counter.eq(counter + 1)
-        self.comb += platform.request("rpi_uart0_rx").eq(ClockSignal("sys"))
-        #self.comb += platform.request("fpga_gpio", 0).eq(counter[0])
-        #self.comb += platform.request("fpga_gpio", 1).eq(counter[1])
+        self.comb += platform.request("fpga_gpio", 0).eq(counter[0])
 
         # GNSS -------------------------------------------------------------------------------------
 
-#        gnss_pads = platform.request("gnss")
-#        self.comb += [
-#            # GNSS Unused IOs.
-#            gnss_pads.extint.eq(0),
-#            gnss_pads.ddc_scl.eq(1),
-#            gnss_pads.ddc_sda.eq(1),
-#
-#            # GNSS Power-up (Active low reset).
-#            gnss_pads.reset.eq(1),
-#
-#            # GNSS Time Pulse.
-#            #gnss_pads.tpulse, # FIXME: Connect.
-#
-#            # GNSS UART (Connect to RPI UART0).
-#            platform.request("rpi_uart0_rx").eq(gnss_pads.uart_tx),
-#            gnss_pads.uart_rx.eq(platform.request("rpi_uart0_tx")),
-#        ]
+        gnss_pads = platform.request("gnss")
+        self.comb += [
+            # GNSS Unused IOs.
+            gnss_pads.extint.eq(0),
+            gnss_pads.ddc_scl.eq(1),
+            gnss_pads.ddc_sda.eq(1),
+
+            # GNSS Power-up (Active low reset).
+            gnss_pads.reset.eq(1),
+
+            # GNSS Time Pulse.
+            platform.request("fpga_gpio", 1).eq(gnss_pads.tpulse),
+
+            # GNSS UART (Connect to RPI UART0).
+            platform.request("rpi_uart0_rx").eq(gnss_pads.uart_tx),
+            gnss_pads.uart_rx.eq(platform.request("rpi_uart0_tx")),
+        ]
 
 
          # LimePSB RPCM top ------------------------------------------------------------------------
@@ -164,7 +169,7 @@ class BaseSoC(SoCMini):
             i_RPI_SYNC_OUT      = platform.request("rpi_sync_out"),
             i_RPI_SPI1_SCLK     = platform.request("rpi_spi1_sclk"),
             i_RPI_SPI1_MOSI     = platform.request("rpi_spi1_mosi"),
-            #o_RPI_SPI1_MISO     = platform.request("rpi_spi1_miso"), # FIXME.
+            o_RPI_SPI1_MISO     = platform.request("rpi_spi1_miso"),
             i_RPI_SPI1_SS1      = platform.request("rpi_spi1_ss1"),
             i_RPI_SPI1_SS2      = platform.request("rpi_spi1_ss2"),
 
@@ -179,8 +184,7 @@ class BaseSoC(SoCMini):
             o_FPGA_SYNC_OUT     = platform.request("fpga_sync_out"),
             o_FPGA_SPI0_SCLK    = platform.request("fpga_spi0_sclk"),
             o_FPGA_SPI0_MOSI    = platform.request("fpga_spi0_mosi"),
-            #o_FPGA_SPI0_DAC_SS  = platform.request("fpga_spi0_dac_ss"),  # FIXME.
-
+            o_FPGA_SPI0_DAC_SS  = platform.request("fpga_spi0_dac_ss"),
         )
 
         # PPS Detector VHD2V Converter.
