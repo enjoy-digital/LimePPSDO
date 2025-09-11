@@ -96,44 +96,6 @@ architecture arch of LimePSB_RPCM_top is
 
    signal neo430_gpio   : std_logic_vector(15 downto 0);
 
-   component SB_IO
-      generic (
-         PIN_TYPE    : bit_vector(5 downto 0);
-         NEG_TRIGGER : bit
-      );
-      port (
-         D_OUT_1           : in std_logic;
-         D_OUT_0           : in std_logic;
-         CLOCK_ENABLE     : in std_logic;
-         LATCH_INPUT_VALUE : in std_logic;
-         INPUT_CLK        : in std_logic;
-         D_IN_1            : out std_logic;
-         D_IN_0            : out std_logic;
-         OUTPUT_ENABLE    : in std_logic := 'H';
-         OUTPUT_CLK       : in std_logic;
-         PACKAGE_PIN      : inout std_logic
-      );
-   end component;
-   
---   component rgb_io is
---      port (
---         clk       : in    std_logic;
---         RGB       : in    std_logic_vector(2 downto 0);
---         rgb0      : out   std_logic;
---         rgb1      : out   std_logic;
---         rgb2_in   : in    std_logic;
---         rgb2_out  : out   std_logic
---      );
---   end component;
-
-   component SB_HFOSC is
-      port (
-         CLKHF   : out std_logic;
-         CLKHFEN :  in std_logic;
-         CLKHFPU :  in std_logic
-      );
-   end component;
-
    component pps_detector is
     port (
         clk        : in  std_logic;
@@ -259,41 +221,6 @@ architecture arch of LimePSB_RPCM_top is
 
 begin
 
--- ----------------------------------------------------------------------------
--- RGB instance.
--- ----------------------------------------------------------------------------
---   rgb_io_inst : rgb_io
---   port map(
---      clk      => LMK10_CLK_OUT0,
---      RGB(0)   => HW_VER(0),
---      RGB(1)   => HW_VER(1),
---      RGB(2)   => FPGA_LED_R,
---      rgb0     => hw_ver_sig(0),
---      rgb1     => hw_ver_sig(1),
---      rgb2_in  => NOT (GNSS_TPULSE AND from_gpsdocfg.IICFG_EN),
---      rgb2_out => open
---   );
-
-   hw_ver_sig <= HW_VER; -- FIXME: SB_IO_OD required?
-
-
-       rgb_io : SB_IO
-         generic map (
-            PIN_TYPE    => "011001",
-            NEG_TRIGGER => '0'
-         )
-         port map (
-            PACKAGE_PIN      => FPGA_LED_R,
-            LATCH_INPUT_VALUE => '0',
-            CLOCK_ENABLE     => '0',
-            INPUT_CLK        => '0',
-            OUTPUT_CLK       => '0',
-            OUTPUT_ENABLE    => open,
-            D_OUT_0           => NOT (GNSS_TPULSE AND from_gpsdocfg.IICFG_EN),
-            D_OUT_1           => '0',
-            D_IN_0            => open,
-            D_IN_1            => open
-         );
 
    pps_detector_inst : pps_detector
 --      Generic map(
@@ -437,7 +364,6 @@ begin
    neo430_gpio_i(0)           <= from_gpsdocfg.IICFG_EN;
    neo430_gpio_i(15 downto 1) <= (others=>'0');
 
-
 -- ----------------------------------------------------------------------------
 -- VCTCXO tamer 
 -- ----------------------------------------------------------------------------
@@ -494,16 +420,6 @@ begin
 -- ----------------------------------------------------------------------------
 -- Output ports
 -- ----------------------------------------------------------------------------
-
-   -- In HW_VER="01" TDD signal has to be inverted
-   process(all)
-   begin 
-      if hw_ver_sig(0)='1' then 
-         FPGA_RF_SW_TDD    <= NOT PCIE_UIM; 
-      else 
-         FPGA_RF_SW_TDD    <= PCIE_UIM;
-      end if;
-   end process;
 
    --DAC can be controlled from host only when GPSO is turned off
    FPGA_SPI0_SCLK   <= RPI_SPI1_SCLK   when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_sclk;
