@@ -51,14 +51,6 @@ entity LimePSB_RPCM_top is
       FPGA_SPI0_MOSI    : out    std_logic;
       FPGA_SPI0_DAC_SS  : out    std_logic;
       FPGA_LED_R        : inout  std_logic;
-      -- GNSS
-      GNSS_EXTINT       : out    std_logic;
-      GNSS_RESET        : out    std_logic;
-      GNSS_DDC_SCL      : inout  std_logic;
-      GNSS_DDC_SDA      : inout  std_logic;
-      GNSS_TPULSE       : in     std_logic; 
-      GNSS_UART_TX      : in     std_logic;
-      GNSS_UART_RX      : out    std_logic;
       -- MISC
       PCIE_UIM          : in     std_logic;
       EN_CM5_USB3       : in     std_logic;
@@ -566,9 +558,7 @@ por_rst_n <= por_vect(0) AND por_vect(1);
 -- ----------------------------------------------------------------------------
 -- Output ports
 -- ----------------------------------------------------------------------------
-   RPI_UART0_RX      <= GNSS_UART_TX;
-   GNSS_UART_RX      <= RPI_UART0_TX;
-   
+
    -- In HW_VER="01" TDD signal has to be inverted
    process(all)
    begin 
@@ -588,8 +578,6 @@ por_rst_n <= por_vect(0) AND por_vect(1);
    
    RPI_SYNC_IN <=    'Z'            when from_gpsdocfg.IICFG_TPULSE_SEL = "10" OR from_gpsdocfg.IICFG_RPI_SYNC_IN_DIR = '0' else 
                      GNSS_TPULSE;          -- 10 - RPI_SYNC_IN is input , else - RPI_SYNC_IN is output with GNSS_TPULSE
-
-   GNSS_RESET <= '1';
    
    RPI_SPI1_MISO <= rpi_spi1_miso_o when gpsdocfg_oen = '1' else 'Z';
    
