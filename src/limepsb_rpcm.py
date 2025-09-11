@@ -37,15 +37,38 @@ class BaseSoC(SoCMini):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
+
         SoCMini.__init__(self, platform, sys_clk_freq, ident="LiteX SoC on LimePSB RPCM Board")
 
         # CRG --------------------------------------------------------------------------------------
+
         self.crg = _CRG(platform)
 
         # GPIO Toggling (Debug) --------------------------------------------------------------------
-        counter = Signal(16)
-        self.sync += counter.eq(counter + 1)
-        self.comb += platform.request("rpi_uart0_rx").eq(counter[8])
+        #counter = Signal(16)
+        #self.sync += counter.eq(counter + 1)
+        #self.comb += platform.request("rpi_uart0_rx").eq(counter[8])
+
+        # GNSS -------------------------------------------------------------------------------------
+
+        gnss_pads = platform.request("gnss")
+        self.comb += [
+            # GNSS Unused IOs.
+            gnss_pads.extint.eq(0),
+            gnss_pads.ddc_scl.eq(1),
+            gnss_pads.ddc_sda.eq(1),
+
+            # GNSS Power-up (Active low reset).
+            gnss_pads.reset.eq(1),
+
+            # GNSS Time Pulse.
+            #gnss_pads.tpulse, # FIXME: Connect.
+
+            # GNSS UART (Connect to RPI UART0).
+            platform.request("rpi_uart0_rx").eq(gnss_pads.uart_tx),
+            gnss_pads.uart_rx.eq(platform.request("rpi_uart0_tx")),
+        ]
+
 
 # Build --------------------------------------------------------------------------------------------
 def main():

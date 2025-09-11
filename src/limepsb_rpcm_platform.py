@@ -75,13 +75,16 @@ io = [
 
     # GNSS.
     # -----
-    ("gnss_extint",      0, Pins("25"), IOStandard("LVCMOS33")),
-    ("gnss_reset",       0, Pins("23"), IOStandard("LVCMOS33")),
-    ("gnss_ddc_scl",     0, Pins("28"), IOStandard("LVCMOS33")),
-    ("gnss_ddc_sda",     0, Pins("27"), IOStandard("LVCMOS33")),
-    ("gnss_tpulse",      0, Pins("20"), IOStandard("LVCMOS33")),
-    ("gnss_uart_tx",     0, Pins("31"), IOStandard("LVCMOS33")),
-    ("gnss_uart_rx",     0, Pins("32"), IOStandard("LVCMOS33")),
+    ("gnss", 0,
+        Subsignal("extint",  Pins("25")),
+        Subsignal("reset",   Pins("23")),
+        Subsignal("ddc_scl", Pins("28")),
+        Subsignal("ddc_sda", Pins("27")),
+        Subsignal("tpulse",  Pins("20")),
+        Subsignal("uart_tx", Pins("31")),
+        Subsignal("uart_rx", Pins("32")),
+        IOStandard("LVCMOS33")
+    ),
 
     # Misc.
     # -----
