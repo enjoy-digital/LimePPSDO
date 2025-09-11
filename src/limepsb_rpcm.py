@@ -33,7 +33,7 @@ class _CRG(LiteXModule):
 
 # BaseSoC ------------------------------------------------------------------------------------------
 class BaseSoC(SoCMini):
-    def __init__(self, sys_clk_freq=10e6, with_led_chaser=True, **kwargs):
+    def __init__(self, sys_clk_freq=10e6, **kwargs):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
@@ -42,58 +42,10 @@ class BaseSoC(SoCMini):
         # CRG --------------------------------------------------------------------------------------
         self.crg = _CRG(platform)
 
-        # LED Chaser -------------------------------------------------------------------------------
-        if with_led_chaser:
-            led_o = Signal()
-            self.leds = LedChaser(
-                pads         = led_o,
-                sys_clk_freq = sys_clk_freq,
-            )
-#        self.specials += Instance("SB_IO_OD",
-#            p_PIN_TYPE          = "011001",  # Combinatorial output, combinatorial OE, no input (adjust to "101001" if you later need input)
-#            p_NEG_TRIGGER       = 0,
-#
-#            i_PACKAGEPIN      = platform.request("fpga_led_r"),
-#            i_LATCHINPUTVALUE = 0,
-#            i_CLOCKENABLE     = 0,
-#            i_INPUTCLK        = 0,
-#            i_OUTPUTCLK       = 0,
-#            i_OUTPUTENABLE    = 1,
-#            i_DOUT0           = led_o,
-#            i_DOUT1           = 0,
-#            o_DIN0            = Open(),
-#            o_DIN1            = Open(),
-#        )
-
-#        self.specials += Instance("SB_RGBA_DRV",
-#            p_CURRENT_MODE = "0b1",           # full-current mode
-#            p_RGB0_CURRENT = "0b000000",      # unused
-#            p_RGB1_CURRENT = "0b000000",      # unused
-#            p_RGB2_CURRENT = "0b111111",      # MAX setting (~up to 16 mA sink)
-#            i_CURREN     = 1,
-#            i_RGBLEDEN   = 1,
-#            i_RGB0PWM    = 0,
-#            i_RGB1PWM    = 0,
-#            i_RGB2PWM    = led_o,             # 1 = sink current = LED on
-#            o_RGB0       = Open(),
-#            o_RGB1       = Open(),
-#            o_RGB2       = platform.request("fpga_led_r"),
-#        )
-
-        #self.specials += Instance("SB_IO",
-        #    p_PIN_TYPE      = 0b011001,   # comb output, comb OE
-        #    p_PULLUP        = 1,
-        #    p_IO_STANDARD   = "SB_LVCMOS",
-        #    io_PACKAGE_PIN   = platform.request("fpga_led_r"),
-        #    i_OUTPUT_ENABLE = 1,
-        #    i_D_OUT_0       = ~led_o      # active-low LED
-        #)
-
-        self.comb += platform.request("fpga_led_r").eq(1)
-
+        # GPIO Toggling (Debug) --------------------------------------------------------------------
         counter = Signal(16)
         self.sync += counter.eq(counter + 1)
-        self.comb += platform.request("rpi_uart0_rx").eq(ClockSignal("sys"))
+        self.comb += platform.request("rpi_uart0_rx").eq(counter[8])
 
 # Build --------------------------------------------------------------------------------------------
 def main():
