@@ -169,11 +169,6 @@ class BaseSoC(SoCMini):
             i_RPI_SPI1_SS2      = platform.request("rpi_spi1_ss2"),
 
             # FPGA
-            #o_FPGA_SYNC_OUT     = platform.request("fpga_sync_out"),
-            #o_FPGA_SPI0_SCLK    = platform.request("fpga_spi0_sclk"),
-            #o_FPGA_SPI0_MOSI    = platform.request("fpga_spi0_mosi"),
-            #o_FPGA_SPI0_DAC_SS  = platform.request("fpga_spi0_dac_ss"),
-
             io_FPGA_GPIO        = Open(),
             io_FPGA_CFG_SPI_SCK = platform.request("fpga_cfg_spi_sck"),
             io_FPGA_CFG_SPI_SI  = platform.request("fpga_cfg_spi_si"),
@@ -181,10 +176,10 @@ class BaseSoC(SoCMini):
             i_FPGA_CFG_SPI_CSN  = platform.request("fpga_cfg_spi_csn"),
             io_FPGA_I2C_SCL     = platform.request("fpga_i2c_scl"),
             io_FPGA_I2C_SDA     = platform.request("fpga_i2c_sda"),
-            o_FPGA_SYNC_OUT     = Open(),
-            o_FPGA_SPI0_SCLK    = Open(),
-            o_FPGA_SPI0_MOSI    = Open(),
-            o_FPGA_SPI0_DAC_SS  = Open(),
+            o_FPGA_SYNC_OUT     = platform.request("fpga_sync_out"),
+            o_FPGA_SPI0_SCLK    = platform.request("fpga_spi0_sclk"),
+            o_FPGA_SPI0_MOSI    = platform.request("fpga_spi0_mosi"),
+            #o_FPGA_SPI0_DAC_SS  = platform.request("fpga_spi0_dac_ss"),  # FIXME.
 
         )
 
