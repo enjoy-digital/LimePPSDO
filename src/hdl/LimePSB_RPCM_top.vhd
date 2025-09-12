@@ -80,22 +80,6 @@ architecture arch of LimePSB_RPCM_top is
     );
    end component;
 
-   component gpsdocfg is
-   port (
-      maddress    : in  std_logic_vector(9 downto 0);
-      mimo_en     : in  std_logic;
-      sdin        : in  std_logic;
-      sclk        : in  std_logic;
-      sen         : in  std_logic;
-      sdout       : out std_logic;
-      lreset      : in  std_logic;
-      mreset      : in  std_logic;
-      oen         : out std_logic;
-      to_gpsdocfg  : in  t_TO_GPSDOCFG;
-      from_gpsdocfg: out t_FROM_GPSDOCFG
-   );
-   end component;
-
    component vctcxo_tamer is
     port(
         tune_ref           :   in  std_logic;
@@ -209,30 +193,6 @@ begin
 -- ----------------------------------------------------------------------------
 -- gpsdocfg SPI instance.
 -- ----------------------------------------------------------------------------
-   gpsdocfg_inst : gpsdocfg
-   port map(
-      -- Address and location of this module
-      -- Will be hard wired at the top level
-      maddress       => std_logic_vector(to_unsigned(c_GPSDOCFG_START_ADDR/32,10)),
-      mimo_en        => '1',   
-      -- Serial port IOs
-      sdin           => RPI_SPI1_MOSI,
-      sclk           => RPI_SPI1_SCLK,
-      sen            => RPI_SPI1_SS1,
-      sdout          => rpi_spi1_miso_o,  
-      -- Signals coming from the pins or top level serial interface
-      lreset         => not SYS_RST_N,   -- Logic reset signal, resets logic cells only  (use only one reset)
-      mreset         => not SYS_RST_N,   -- Memory reset signal, resets configuration memory only (use only one reset)
-      oen            => gpsdocfg_oen,
-      --stateo         => open,      
-      to_gpsdocfg    => to_gpsdocfg,
-      from_gpsdocfg  => from_gpsdocfg
-   );
-
-   --to_gpsdocfg.BOM_VER <= '0'  & BOM_VER;
-   --to_gpsdocfg.HW_VER  <= "00" & hw_ver_sig;
-
-
    to_gpsdocfg.PPS_1S_ERROR   <= vctcxo_tamer_pps_1s_error;  
    to_gpsdocfg.PPS_10S_ERROR  <= vctcxo_tamer_pps_10s_error; 
    to_gpsdocfg.PPS_100S_ERROR <= vctcxo_tamer_pps_100s_error;
