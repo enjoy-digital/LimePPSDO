@@ -261,9 +261,6 @@ begin
 -- ----------------------------------------------------------------------------
 -- VCTCXO tamer 
 -- ----------------------------------------------------------------------------
-   tpulse_internal   <= RPI_SYNC_OUT   when from_gpsdocfg.IICFG_TPULSE_SEL = "01" else 
-                        RPI_SYNC_IN    when from_gpsdocfg.IICFG_TPULSE_SEL = "10" else GNSS_TPULSE;
-   vctcxo_clk        <= LMK10_CLK_OUT0 when from_gpsdocfg.IICFG_CLK_SEL = '1'     else LMKRF_CLK_OUT4;
 
    vctcxo_tamer_inst : vctcxo_tamer
       port map(

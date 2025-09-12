@@ -227,7 +227,36 @@ class BaseSoC(SoCCore):
             o_IICFG_100S_TOL_out        = gpsdocfg_IICFG_100S_TOL_out
         )
 
-        # DAC SPI Sharing Logic ----------------------------------------------------------------
+        # TPULSE Selection -------------------------------------------------------------------------
+
+        rpi_sync_pads  = platform.request("rpi_sync")
+
+
+        tpulse_internal = Signal()
+
+        self.comb += [
+            # TPULSE selection based on IICFG_TPULSE_SEL_out
+            If(gpsdocfg_IICFG_TPULSE_SEL_out == 0b01,
+                tpulse_internal.eq(rpi_sync_pads.o)  # RPI_SYNC_OUT
+            ).Elif(gpsdocfg_IICFG_TPULSE_SEL_out == 0b10,
+                tpulse_internal.eq(rpi_sync_pads.i)  # RPI_SYNC_IN
+            ).Else(
+                tpulse_internal.eq(gnss_pads.tpulse)  # GNSS_TPULSE (default)
+            ),
+        ]
+
+        # Clock Selection --------------------------------------------------------------------------
+
+        vctcxo_clk = Signal()
+        self.comb += [
+            If(gpsdocfg_IICFG_CLK_SEL_out == 1,
+                vctcxo_clk.eq(lmk10_clk_out0)  # LMK10_CLK_OUT0
+            ).Else(
+                vctcxo_clk.eq(lmkrf_clk_out4)  # LMKRF_CLK_OUT4 (default)
+            )
+        ]
+
+        # DAC SPI Sharing Logic --------------------------------------------------------------------
 
         fpga_spi0_pads = platform.request("fpga_spi0")
 
@@ -250,9 +279,6 @@ class BaseSoC(SoCCore):
 
 
         # RPI_SYNC_IN.
-
-        rpi_sync_pads  = platform.request("rpi_sync")
-
         from litex.build.io import SDRTristate
         self.specials += SDRTristate(
             io  = rpi_sync_pads.i,
