@@ -1,10 +1,10 @@
 -- ----------------------------------------------------------------------------	
--- FILE:	mcfg32wm_fsm.vhd
--- DESCRIPTION:	Finite State Machine for serial interface
+-- FILE        :	mcfg32wm_fsm.vhd
+-- DESCRIPTION :	Finite State Machine for serial interface
 --							addresses 32 words, with MIMO enable.
--- DATE:	Mar 22, 2013
--- AUTHOR(s):	Lime Microsystems
--- REVISIONS:
+-- DATE        :	Mar 22, 2013
+-- AUTHOR(s)   :	Lime Microsystems
+-- REVISIONS   :
 -- ----------------------------------------------------------------------------	
 
 library ieee;
@@ -15,19 +15,18 @@ use ieee.std_logic_1164.all;
 -- ----------------------------------------------------------------------------
 entity mcfg32wm_fsm is
 	port(
-		address: in std_logic_vector(9 downto 0);	-- Hardware address
-		mimo_en: in std_logic;
-		inst_reg: in std_logic_vector(15 downto 0);	-- Instruction register (read only here)
-		sclk: in std_logic;				-- Serial clock
-		sen: in std_logic;				-- Serial enable
-		reset: in std_logic;				-- Reset
-		inst_reg_en: out std_logic;			-- Instruction register enable
-		din_reg_en: out std_logic;			-- Data in register enable
-		dout_reg_sen: out std_logic;			-- Data out register shift enable
-		dout_reg_len: out std_logic;			-- Data out register load enable
-		mem_we: out std_logic;				-- Memory write enable
-		oe: out std_logic				-- Output enable
-		--stateo: out std_logic_vector(5 downto 0)
+		address      : in std_logic_vector(9 downto 0);	 -- Hardware address
+		mimo_en      : in std_logic;
+		inst_reg     : in std_logic_vector(15 downto 0); -- Instruction register (read only here)
+		sclk         : in std_logic;				     -- Serial clock
+		sen          : in std_logic;				     -- Serial enable
+		reset        : in std_logic;				     -- Reset
+		inst_reg_en  : out std_logic;			         -- Instruction register enable
+		din_reg_en   : out std_logic;			         -- Data in register enable
+		dout_reg_sen : out std_logic;			         -- Data out register shift enable
+		dout_reg_len : out std_logic;			         -- Data out register load enable
+		mem_we       : out std_logic;				     -- Memory write enable
+		oe           : out std_logic				     -- Output enable
 	);
 end mcfg32wm_fsm;
 
@@ -85,7 +84,6 @@ begin
 			state <= next_state;
 		end if;
 	end process state_register;
-	--stateo <= state;
 
 	state_machine: process (state, sen, inst_reg, address, mimo_en)
 	begin

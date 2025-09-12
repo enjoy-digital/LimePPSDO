@@ -1,9 +1,9 @@
 -- ----------------------------------------------------------------------------	
--- FILE:	fpgacfg.vhd
--- DESCRIPTION:	Serial configuration interface to control TX modules
--- DATE:	June 07, 2007
--- AUTHOR(s):	Lime Microsystems
--- REVISIONS:	
+-- FILE        :	gpsdocfg.vhd
+-- DESCRIPTION :	Serial configuration interface to control GPSDO
+-- DATE        :	June 07, 2007
+-- AUTHOR(s)   :	Lime Microsystems
+-- REVISIONS   :
 -- ----------------------------------------------------------------------------	
 
 library ieee;
@@ -19,41 +19,41 @@ entity gpsdocfg is
    port (
       -- Address and location of this module
       -- Will be hard wired at the top level
-      maddress    : in  std_logic_vector(9 downto 0);
-      mimo_en     : in  std_logic;   -- MIMO enable, from TOP SPI (always 1)
+      maddress                  : in  std_logic_vector(9 downto 0);
+      mimo_en                   : in  std_logic;   -- MIMO enable, from TOP SPI (always 1)
 
       -- Serial port IOs
-      sdin        : in  std_logic;  -- Data in
-      sclk        : in  std_logic;  -- Data clock
-      sen         : in  std_logic;  -- Enable signal (active low)
-      sdout       : out std_logic;  -- Data out
+      sdin                      : in  std_logic;  -- Data in
+      sclk                      : in  std_logic;  -- Data clock
+      sen                       : in  std_logic;  -- Enable signal (active low)
+      sdout                     : out std_logic;  -- Data out
 
       -- Signals coming from the pins or top level serial interface
-      lreset      : in  std_logic;  -- Logic reset signal, resets logic cells only  (use only one reset)
-      mreset      : in  std_logic;  -- Memory reset signal, resets configuration memory only (use only one reset)
+      lreset                    : in  std_logic;  -- Logic reset signal, resets logic cells only  (use only one reset)
+      mreset                    : in  std_logic;  -- Memory reset signal, resets configuration memory only (use only one reset)
 
-      oen         : out std_logic;  --nc
+      oen                       : out std_logic;  --nc
 
       -- Inputs (formerly in t_TO_GPSDOCFG)
-      PPS_1S_ERROR_in   : in  std_logic_vector(31 downto 0);
-      PPS_10S_ERROR_in  : in  std_logic_vector(31 downto 0);
-      PPS_100S_ERROR_in : in  std_logic_vector(31 downto 0);
-      DAC_TUNED_VAL_in  : in  std_logic_vector(15 downto 0);
-      ACCURACY_in       : in  std_logic_vector(3 downto 0);
-      STATE_in          : in  std_logic_vector(3 downto 0);
-      TPULSE_ACTIVE_in  : in  std_logic;
+      PPS_1S_ERROR_in           : in  std_logic_vector(31 downto 0);
+      PPS_10S_ERROR_in          : in  std_logic_vector(31 downto 0);
+      PPS_100S_ERROR_in         : in  std_logic_vector(31 downto 0);
+      DAC_TUNED_VAL_in          : in  std_logic_vector(15 downto 0);
+      ACCURACY_in               : in  std_logic_vector(3 downto 0);
+      STATE_in                  : in  std_logic_vector(3 downto 0);
+      TPULSE_ACTIVE_in          : in  std_logic;
 
       -- Outputs (formerly in t_FROM_GPSDOCFG)
-      IICFG_EN_out                : out std_logic;
-      IICFG_CLK_SEL_out           : out std_logic;
-      IICFG_TPULSE_SEL_out        : out std_logic_vector(1 downto 0);
-      IICFG_RPI_SYNC_IN_DIR_out   : out std_logic;
-      IICFG_1S_TARGET_out         : out std_logic_vector(31 downto 0);
-      IICFG_1S_TOL_out            : out std_logic_vector(15 downto 0);
-      IICFG_10S_TARGET_out        : out std_logic_vector(31 downto 0);
-      IICFG_10S_TOL_out           : out std_logic_vector(15 downto 0);
-      IICFG_100S_TARGET_out       : out std_logic_vector(31 downto 0);
-      IICFG_100S_TOL_out          : out std_logic_vector(15 downto 0)
+      IICFG_EN_out              : out std_logic;
+      IICFG_CLK_SEL_out         : out std_logic;
+      IICFG_TPULSE_SEL_out      : out std_logic_vector(1 downto 0);
+      IICFG_RPI_SYNC_IN_DIR_out : out std_logic;
+      IICFG_1S_TARGET_out       : out std_logic_vector(31 downto 0);
+      IICFG_1S_TOL_out          : out std_logic_vector(15 downto 0);
+      IICFG_10S_TARGET_out      : out std_logic_vector(31 downto 0);
+      IICFG_10S_TOL_out         : out std_logic_vector(15 downto 0);
+      IICFG_100S_TARGET_out     : out std_logic_vector(31 downto 0);
+      IICFG_100S_TOL_out        : out std_logic_vector(15 downto 0)
    );
 end gpsdocfg;
 
@@ -89,19 +89,18 @@ architecture arch of gpsdocfg is
 
    component mcfg32wm_fsm
       port(
-         address: in std_logic_vector(9 downto 0); -- Hardware address
-         mimo_en: in std_logic;
-         inst_reg: in std_logic_vector(15 downto 0);  -- Instruction register (read only here)
-         sclk: in std_logic;           -- Serial clock
-         sen: in std_logic;            -- Serial enable
-         reset: in std_logic;          -- Reset
-         inst_reg_en: out std_logic;         -- Instruction register enable
-         din_reg_en: out std_logic;       -- Data in register enable
-         dout_reg_sen: out std_logic;        -- Data out register shift enable
-         dout_reg_len: out std_logic;        -- Data out register load enable
-         mem_we: out std_logic;           -- Memory write enable
-         oe: out std_logic          -- Output enable
-         --stateo: out std_logic_vector(5 downto 0)
+         address      : in std_logic_vector(9 downto 0);  -- Hardware address
+         mimo_en      : in std_logic;
+         inst_reg     : in std_logic_vector(15 downto 0); -- Instruction register (read only here)
+         sclk         : in std_logic;                     -- Serial clock
+         sen          : in std_logic;                     -- Serial enable
+         reset        : in std_logic;                     -- Reset
+         inst_reg_en  : out std_logic;                    -- Instruction register enable
+         din_reg_en   : out std_logic;                    -- Data in register enable
+         dout_reg_sen : out std_logic;                    -- Data out register shift enable
+         dout_reg_len : out std_logic;                    -- Data out register load enable
+         mem_we       : out std_logic;                    -- Memory write enable
+         oe           : out std_logic                     -- Output enable
       );
    end component;
 
@@ -254,4 +253,5 @@ begin
    IICFG_10S_TOL_out         <= mem(6);
    IICFG_100S_TARGET_out     <= mem(8) & mem(7);
    IICFG_100S_TOL_out        <= mem(9);
+
 end arch;
