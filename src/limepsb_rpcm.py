@@ -256,6 +256,17 @@ class BaseSoC(SoCCore):
             )
         ]
 
+        # PPS Detector -----------------------------------------------------------------------------
+
+        pps_active = Signal()
+
+        self.specials += Instance("pps_detector",
+            i_clk        = ClockSignal("sys"),
+            i_reset      = ResetSignal("sys"),
+            i_pps        = tpulse_internal,
+            o_pps_active = pps_active
+        )
+
         # DAC SPI Sharing Logic --------------------------------------------------------------------
 
         fpga_spi0_pads = platform.request("fpga_spi0")
@@ -276,7 +287,6 @@ class BaseSoC(SoCCore):
 
         # FPGA_SYNC_OUT
         self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
-
 
         # RPI_SYNC_IN.
         from litex.build.io import SDRTristate
@@ -334,23 +344,23 @@ class BaseSoC(SoCCore):
 #            i_GNSS_TPULSE       = gnss_pads.tpulse,
 #        )
 #
-#        # PPS Detector VHD2V Converter.
-#        # -----------------------------
-#        self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
-#            top_entity     = "pps_detector",
-#            build_dir      = os.path.abspath(os.path.dirname(__file__)),
-#            work_package   = "work",
-#            force_convert  = True,
-#            add_instance   = False,
-#            flatten_source = False,
-#            params         = dict(
-#                p_CLK_FREQ_HZ = 6000000,
-#                p_TOLERANCE   = 5000000,
-#            )
-#        )
-#        self.vhd2v_converter_pps_detector.add_source("hdl/pps_detector/pps_detector.vhd")
-#        self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
-#
+        # PPS Detector VHD2V Converter.
+        # -----------------------------
+        self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
+            top_entity     = "pps_detector",
+            build_dir      = os.path.abspath(os.path.dirname(__file__)),
+            work_package   = "work",
+            force_convert  = True,
+            add_instance   = False,
+            flatten_source = False,
+            params         = dict(
+                p_CLK_FREQ_HZ = 6000000,
+                p_TOLERANCE   = 5000000,
+            )
+        )
+        self.vhd2v_converter_pps_detector.add_source("hdl/pps_detector/pps_detector.vhd")
+        self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
+
         # GPSDOCFG VHD2V Converter.
         # -------------------------
         self.vhd2v_converter_gpsdocfg = VHD2VConverter(self.platform,

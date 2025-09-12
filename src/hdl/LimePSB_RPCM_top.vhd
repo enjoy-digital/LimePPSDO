@@ -70,15 +70,6 @@ architecture arch of LimePSB_RPCM_top is
 
    signal neo430_gpio   : std_logic_vector(15 downto 0);
 
-   component pps_detector is
-    port (
-        clk        : in  std_logic;
-        reset      : in  std_logic;
-        pps        : in  std_logic;
-        pps_active : out std_logic
-    );
-   end component;
-
    component vctcxo_tamer is
     port(
         tune_ref           :   in  std_logic;
@@ -177,18 +168,6 @@ architecture arch of LimePSB_RPCM_top is
 begin
 
 
-   pps_detector_inst : pps_detector
---      Generic map(
---          CLK_FREQ_HZ => 6_000_000, -- Nominal system clock frequency
---          TOLERANCE   => 5_000_000   -- Allow ±50% tolerance (adjust as needed)
---      )
-      Port map(
-          clk        => SYS_CLK,            -- System clock
-          reset      => NOT SYS_RST_N,    -- Reset signal
-          pps        => tpulse_internal,  -- 1PPS input signal
-          pps_active => tpulse_active     -- Indicates if PPS is active
-      );
-                 
 -- ----------------------------------------------------------------------------
 -- NEO430 CPU
 -- ----------------------------------------------------------------------------
