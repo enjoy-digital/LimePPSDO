@@ -62,7 +62,6 @@ architecture arch of LimePSB_RPCM_top is
 
    constant c_GPSDOCFG_START_ADDR : integer := 0;
 
-   signal to_gpsdocfg      : t_TO_GPSDOCFG;
    signal from_gpsdocfg    : t_FROM_GPSDOCFG;
    signal rpi_spi1_miso_o  : std_logic;
    signal gpsdocfg_oen     : std_logic;
@@ -189,48 +188,11 @@ begin
           pps        => tpulse_internal,  -- 1PPS input signal
           pps_active => tpulse_active     -- Indicates if PPS is active
       );
-
--- ----------------------------------------------------------------------------
--- gpsdocfg SPI instance.
--- ----------------------------------------------------------------------------
-   to_gpsdocfg.PPS_1S_ERROR   <= vctcxo_tamer_pps_1s_error;  
-   to_gpsdocfg.PPS_10S_ERROR  <= vctcxo_tamer_pps_10s_error; 
-   to_gpsdocfg.PPS_100S_ERROR <= vctcxo_tamer_pps_100s_error;
-   to_gpsdocfg.DAC_TUNED_VAL  <= vctcxo_tamer_dac_tuned_val;
-   to_gpsdocfg.STATE          <= vctcxo_tamer_state;
-   to_gpsdocfg.ACCURACY       <= vctcxo_tamer_accuracy;
-   to_gpsdocfg.TPULSE_ACTIVE  <= tpulse_active;
                  
 -- ----------------------------------------------------------------------------
 -- NEO430 CPU
 -- ----------------------------------------------------------------------------
    neo430_inst : neo430_top_avm
---   generic map(
---     -- general configuration --
---     CLOCK_SPEED  => 6000000,    -- main clock in Hz
---     IMEM_SIZE    => 5*1024,     -- internal IMEM size in bytes, max 48kB (default=4kB)
---     DMEM_SIZE    => 2*1024,     -- internal DMEM size in bytes, max 12kB (default=2kB)
---     -- additional configuration --
---     USER_CODE    => x"0000",    -- custom user code
---     -- module configuration --
---     MULDIV_USE   => false,   -- implement multiplier/divider unit? (default=true)
---     WB32_USE     => true,    -- implement WB32 unit? (default=true)
---     WDT_USE      => false,   -- implement WDT? (default=true)
---     GPIO_USE     => true,    -- implement GPIO unit? (default=true)
---     TIMER_USE    => false,   -- implement timer? (default=true)
---     UART_USE     => false,   -- implement UART? (default=true)
---     CRC_USE      => false,   -- implement CRC unit? (default=true)
---     CFU_USE      => false,   -- implement custom functions unit? (default=false)
---     PWM_USE      => false,   -- implement PWM controller?
---     TWI_USE      => false,   -- implement two wire serial interface? (default=true)
---     SPI_USE      => true,    -- implement SPI? (default=true)
---     TRNG_USE     => false,   -- implement TRNG? (default=false)
---     EXIRQ_USE    => true,    -- implement EXIRQ? (default=true)
---     FREQ_GEN_USE => false,   -- implement FREQ_GEN? (default=true)
---     -- boot configuration --
---     BOOTLD_USE   => false,   -- implement and use bootloader? (default=true)
---     IMEM_AS_ROM  => true    -- implement IMEM as read-only memory? (default=false)
---   )
    port map(
      -- global control --
      clk_i           => SYS_CLK,      -- global clock, rising edge
@@ -346,8 +308,6 @@ begin
          --pps_10s_count_v    => open, 
          --pps_100s_count_v   => open
       );
-
-
 
 -- ----------------------------------------------------------------------------
 -- Output ports
