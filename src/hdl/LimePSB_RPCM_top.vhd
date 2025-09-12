@@ -48,7 +48,10 @@ entity LimePSB_RPCM_top is
       FPGA_SYNC_OUT    : out    std_logic;
       FPGA_SPI0_SCLK   : out    std_logic;
       FPGA_SPI0_MOSI   : out    std_logic;
-      FPGA_SPI0_DAC_SS : out    std_logic
+      FPGA_SPI0_DAC_SS : out    std_logic;
+
+      -- GNSS
+      GNSS_TPULSE      : in std_logic
    );
 end LimePSB_RPCM_top;
 
@@ -65,8 +68,6 @@ architecture arch of LimePSB_RPCM_top is
    signal gpsdocfg_oen     : std_logic;
 
    signal tpulse_internal : std_logic;
-
-   signal gnss_tpulse : std_logic;
 
    signal neo430_gpio   : std_logic_vector(15 downto 0);
 

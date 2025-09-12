@@ -197,6 +197,9 @@ class BaseSoC(SoCMini):
             o_FPGA_SPI0_SCLK    = fpga_spi0_pads.sclk,
             o_FPGA_SPI0_MOSI    = fpga_spi0_pads.mosi,
             o_FPGA_SPI0_DAC_SS  = fpga_spi0_pads.dac_ss,
+
+            # GNSS
+            i_GNSS_TPULSE       = gnss_pads.tpulse,
         )
 
         # PPS Detector VHD2V Converter.
