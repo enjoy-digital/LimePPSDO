@@ -135,7 +135,9 @@ class BaseSoC(SoCMini):
 
         # GNSS -------------------------------------------------------------------------------------
 
-        gnss_pads = platform.request("gnss")
+        gnss_pads      = platform.request("gnss")
+        rpi_uart0_pads = platform.request("rpi_uart0")
+
         self.comb += [
             # GNSS Unused IOs.
             gnss_pads.extint.eq(0),
@@ -149,12 +151,22 @@ class BaseSoC(SoCMini):
             platform.request("fpga_gpio", 1).eq(gnss_pads.tpulse),
 
             # GNSS UART (Connect to RPI UART0).
-            platform.request("rpi_uart0_rx").eq(gnss_pads.uart_tx),
-            gnss_pads.uart_rx.eq(platform.request("rpi_uart0_tx")),
+            rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
+            gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
 
-         # LimePSB RPCM top ------------------------------------------------------------------------
+        # LimePSB RPCM top ------------------------------------------------------------------------
+
+        # Request Pads.
+
+        rpi_sync_pads  = platform.request("rpi_sync")
+        rpi_spi1_pads  = platform.request("rpi_spi1")
+        fpga_cfg_pads  = platform.request("fpga_cfg")
+        fpga_i2c_pads  = platform.request("fpga_i2c")
+        fpga_spi0_pads = platform.request("fpga_spi0")
+
+        # Instance.
 
         self.specials += Instance("LimePSB_RPCM_top",
             i_SYS_CLK           = ClockSignal("sys"),
@@ -165,26 +177,26 @@ class BaseSoC(SoCMini):
             i_LMKRF_CLK_OUT4    = platform.request("lmkrf_clk_out4"),
 
             # RPI
-            io_RPI_SYNC_IN      = platform.request("rpi_sync_in"),
-            i_RPI_SYNC_OUT      = platform.request("rpi_sync_out"),
-            i_RPI_SPI1_SCLK     = platform.request("rpi_spi1_sclk"),
-            i_RPI_SPI1_MOSI     = platform.request("rpi_spi1_mosi"),
-            o_RPI_SPI1_MISO     = platform.request("rpi_spi1_miso"),
-            i_RPI_SPI1_SS1      = platform.request("rpi_spi1_ss1"),
-            i_RPI_SPI1_SS2      = platform.request("rpi_spi1_ss2"),
+            io_RPI_SYNC_IN      = rpi_sync_pads.i,
+            i_RPI_SYNC_OUT      = rpi_sync_pads.o,
+            i_RPI_SPI1_SCLK     = rpi_spi1_pads.sclk,
+            i_RPI_SPI1_MOSI     = rpi_spi1_pads.mosi,
+            o_RPI_SPI1_MISO     = rpi_spi1_pads.miso,
+            i_RPI_SPI1_SS1      = rpi_spi1_pads.ss1,
+            i_RPI_SPI1_SS2      = rpi_spi1_pads.ss2,
 
             # FPGA
             io_FPGA_GPIO        = Open(),
-            io_FPGA_CFG_SPI_SCK = platform.request("fpga_cfg_spi_sck"),
-            io_FPGA_CFG_SPI_SI  = platform.request("fpga_cfg_spi_si"),
-            io_FPGA_CFG_SPI_SO  = platform.request("fpga_cfg_spi_so"),
-            i_FPGA_CFG_SPI_CSN  = platform.request("fpga_cfg_spi_csn"),
-            io_FPGA_I2C_SCL     = platform.request("fpga_i2c_scl"),
-            io_FPGA_I2C_SDA     = platform.request("fpga_i2c_sda"),
+            io_FPGA_CFG_SPI_SCK = fpga_cfg_pads.sck,
+            io_FPGA_CFG_SPI_SI  = fpga_cfg_pads.si,
+            io_FPGA_CFG_SPI_SO  = fpga_cfg_pads.so,
+            i_FPGA_CFG_SPI_CSN  = fpga_cfg_pads.csn,
+            io_FPGA_I2C_SCL     = fpga_i2c_pads.scl,
+            io_FPGA_I2C_SDA     = fpga_i2c_pads.sda,
             o_FPGA_SYNC_OUT     = platform.request("fpga_sync_out"),
-            o_FPGA_SPI0_SCLK    = platform.request("fpga_spi0_sclk"),
-            o_FPGA_SPI0_MOSI    = platform.request("fpga_spi0_mosi"),
-            o_FPGA_SPI0_DAC_SS  = platform.request("fpga_spi0_dac_ss"),
+            o_FPGA_SPI0_SCLK    = fpga_spi0_pads.sclk,
+            o_FPGA_SPI0_MOSI    = fpga_spi0_pads.mosi,
+            o_FPGA_SPI0_DAC_SS  = fpga_spi0_pads.dac_ss,
         )
 
         # PPS Detector VHD2V Converter.

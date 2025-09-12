@@ -15,8 +15,8 @@ from litex.build.lattice import LatticeiCE40Platform
 io = [
     # Clks.
     # -----
-    ("lmk10_clk_out0",   0, Pins("37"), IOStandard("LVCMOS33")), # 10MHz.
-    ("lmkrf_clk_out4",   0, Pins("35"), IOStandard("LVCMOS33")), # 30.72MHz.
+    ("lmk10_clk_out0", 0, Pins("37"), IOStandard("LVCMOS33")), # 10MHz.
+    ("lmkrf_clk_out4", 0, Pins("35"), IOStandard("LVCMOS33")), # 30.72MHz.
 
     # BOM/HW Version.
     # ---------------
@@ -30,48 +30,66 @@ io = [
     # ----
 
     # Sync.
-    ("rpi_sync_in",      0, Pins( "2"), IOStandard("LVCMOS33")),
-    ("rpi_sync_out",     0, Pins("44"), IOStandard("LVCMOS33")),
+    ("rpi_sync", 0,
+        Subsignal("i", Pins("2")),
+        Subsignal("o", Pins("44")),
+        IOStandard("LVCMOS33")
+    ),
 
     # SPI.
-    ("rpi_spi1_sclk",    0, Pins( "6"), IOStandard("LVCMOS33")),
-    ("rpi_spi1_mosi",    0, Pins( "9"), IOStandard("LVCMOS33")),
-    ("rpi_spi1_miso",    0, Pins("10"), IOStandard("LVCMOS33")),
-    ("rpi_spi1_ss1",     0, Pins("11"), IOStandard("LVCMOS33")),
-    ("rpi_spi1_ss2",     0, Pins("12"), IOStandard("LVCMOS33")),
+    ("rpi_spi1", 0,
+        Subsignal("sclk", Pins("6")),
+        Subsignal("mosi", Pins("9")),
+        Subsignal("miso", Pins("10")),
+        Subsignal("ss1",  Pins("11")),
+        Subsignal("ss2",  Pins("12")),
+        IOStandard("LVCMOS33")
+    ),
 
     # UART.
-    ("rpi_uart0_tx",     0, Pins("36"), IOStandard("LVCMOS33")),
-    ("rpi_uart0_rx",     0, Pins("34"), IOStandard("LVCMOS33")),
+    ("rpi_uart0", 0,
+        Subsignal("tx", Pins("36")),
+        Subsignal("rx", Pins("34")),
+        IOStandard("LVCMOS33")
+    ),
 
     # FPGA.
     # -----
 
     # Config.
-    ("fpga_cfg_spi_sck", 0, Pins("15"), IOStandard("LVCMOS33")),
-    ("fpga_cfg_spi_si",  0, Pins("17"), IOStandard("LVCMOS33")),
-    ("fpga_cfg_spi_so",  0, Pins("14"), IOStandard("LVCMOS33")),
-    ("fpga_cfg_spi_csn", 0, Pins("16"), IOStandard("LVCMOS33")),
+    ("fpga_cfg", 0,
+        Subsignal("sck", Pins("15")),
+        Subsignal("si",  Pins("17")),
+        Subsignal("so",  Pins("14")),
+        Subsignal("csn", Pins("16")),
+        IOStandard("LVCMOS33")
+    ),
 
     # GPIOs.
-    ("fpga_gpio",        0, Pins("45"), IOStandard("LVCMOS33")),
-    ("fpga_gpio",        1, Pins("21"), IOStandard("LVCMOS33")),
+    ("fpga_gpio", 0, Pins("45"), IOStandard("LVCMOS33")),
+    ("fpga_gpio", 1, Pins("21"), IOStandard("LVCMOS33")),
 
     # I2C.
-    ("fpga_i2c_scl",     0, Pins("47"), IOStandard("LVCMOS33")),
-    ("fpga_i2c_sda",     0, Pins("48"), IOStandard("LVCMOS33")),
+    ("fpga_i2c", 0,
+        Subsignal("scl", Pins("47")),
+        Subsignal("sda", Pins("48")),
+        IOStandard("LVCMOS33")
+    ),
 
     # Sync.
-    ("fpga_rf_sw_tdd",   0, Pins("13"), IOStandard("LVCMOS33")),
-    ("fpga_sync_out",    0, Pins("3"),  IOStandard("LVCMOS33")),
+    ("fpga_rf_sw_tdd", 0, Pins("13"), IOStandard("LVCMOS33")),
+    ("fpga_sync_out",  0, Pins("3"),  IOStandard("LVCMOS33")),
 
     # SPI.
-    ("fpga_spi0_sclk",   0, Pins("43"), IOStandard("LVCMOS33")),
-    ("fpga_spi0_mosi",   0, Pins("38"), IOStandard("LVCMOS33")),
-    ("fpga_spi0_dac_ss", 0, Pins("42"), IOStandard("LVCMOS33")),
+    ("fpga_spi0", 0,
+        Subsignal("sclk",    Pins("43")),
+        Subsignal("mosi",    Pins("38")),
+        Subsignal("dac_ss",  Pins("42")),
+        IOStandard("LVCMOS33")
+    ),
 
     # Led.
-    ("fpga_led_r",       0, Pins("39"), IOStandard("LVCMOS33")),
+    ("fpga_led_r", 0, Pins("39"), IOStandard("LVCMOS33")),
 
     # GNSS.
     # -----
@@ -88,8 +106,8 @@ io = [
 
     # Misc.
     # -----
-    ("pcie_uim",         0, Pins("46"), IOStandard("LVCMOS33")),
-    ("en_cm5_usb3",      0, Pins( "4"), IOStandard("LVCMOS33")),
+    ("pcie_uim",    0, Pins("46"), IOStandard("LVCMOS33")),
+    ("en_cm5_usb3", 0, Pins( "4"), IOStandard("LVCMOS33")),
 ]
 
 # Platform --------------------------------------------------------------------------------------
