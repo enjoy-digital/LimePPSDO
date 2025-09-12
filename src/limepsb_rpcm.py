@@ -32,12 +32,9 @@ from limepsb_rpcm_platform import Platform
 
 # CRG ----------------------------------------------------------------------------------------------
 
-# FIXME: Understand why integrated HFOSC divider don't seem to work with Yosys and remove divider.
-
 class _CRG(LiteXModule):
-    def __init__(self, platform, sys_clk_freq, use_logic_divider=True):
+    def __init__(self, platform, sys_clk_freq):
         self.rst         = Signal()
-        self.cd_osc      = ClockDomain()
         self.cd_sys      = ClockDomain()
         self.cd_por      = ClockDomain()
         assert sys_clk_freq in [6e6, 12e6, 24e6, 48e6]
@@ -58,33 +55,15 @@ class _CRG(LiteXModule):
             24e6 : "0b01",
             48e6 : "0b00",
         }[sys_clk_freq]
-        if use_logic_divider:
-            clk_hf_div = "0b00" # Force to 48MHz.
         self.specials += Instance("SB_HFOSC",
             p_CLKHF_DIV = clk_hf_div,
             i_CLKHFEN   = 0b1,
             i_CLKHFPU   = 0b1,
-            o_CLKHF     = self.cd_osc.clk,
+            o_CLKHF     = self.cd_sys.clk,
         )
-
-        # Clk Divider.
-        # ------------
-        div_clk = Signal()
-        if use_logic_divider:
-            div_count = Signal(4)
-            self.sync.osc += div_count.eq(div_count + 1)
-            self.comb += div_clk.eq({
-                6e6  : div_count[2],
-                12e6 : div_count[1],
-                24e6 : div_count[0],
-                48e6 : self.cd_osc.clk,
-            }[sys_clk_freq])
-        else:
-            self.comb += div_clk.eq(self.cd_osc.clk)
 
         # Sys Clk Domain.
         # ---------------
-        self.comb += self.cd_sys.clk.eq(div_clk)
         self.specials += AsyncResetSynchronizer(self.cd_sys, ~por_done)
         platform.add_period_constraint(self.cd_sys.clk, 1e9 / sys_clk_freq)
 
