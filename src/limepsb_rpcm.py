@@ -155,6 +155,15 @@ class BaseSoC(SoCCore):
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
+        # Clocks -----------------------------------------------------------------------------------
+
+        lmk10_clk_out0 = Signal()
+        lmkrf_clk_out4 = Signal()
+        self.comb += [
+           lmk10_clk_out0.eq(platform.request("lmk10_clk_out0")),
+           lmkrf_clk_out4.eq(platform.request("lmkrf_clk_out4")),
+        ]
+
         # GPSDOCFG ---------------------------------------------------------------------------------
 
         gpsdocfg_PPS_1S_ERROR_in   = Signal(32, reset=0x12345678)
@@ -216,6 +225,41 @@ class BaseSoC(SoCCore):
             o_IICFG_10S_TOL_out         = gpsdocfg_IICFG_10S_TOL_out,
             o_IICFG_100S_TARGET_out     = gpsdocfg_IICFG_100S_TARGET_out,
             o_IICFG_100S_TOL_out        = gpsdocfg_IICFG_100S_TOL_out
+        )
+
+        # DAC SPI Sharing Logic ----------------------------------------------------------------
+
+        fpga_spi0_pads = platform.request("fpga_spi0")
+
+        self.comb += [
+            # Default to RPI control
+            fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
+            fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
+            fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
+
+            # FPGA control when gpsdocfg_IICFG_EN_out is set.
+            If(gpsdocfg_IICFG_EN_out,
+                fpga_spi0_pads.sclk.eq(0),  # FIXME: Connect.
+                fpga_spi0_pads.mosi.eq(0),  # FIXME: Connect.
+                fpga_spi0_pads.dac_ss.eq(0) # FIXME: Connect.
+            )
+        ]
+
+        # FPGA_SYNC_OUT
+        self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
+
+
+        # RPI_SYNC_IN.
+
+        rpi_sync_pads  = platform.request("rpi_sync")
+
+        from litex.build.io import SDRTristate
+        self.specials += SDRTristate(
+            io  = rpi_sync_pads.i,
+            i   = Open(),
+            o   = gnss_pads.tpulse,
+            oe  = ~((gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out == 0) | (gpsdocfg_IICFG_TPULSE_SEL_out == 0b10)),
+            clk = ClockSignal("sys"),
         )
 
 #        # LimePSB RPCM top ------------------------------------------------------------------------

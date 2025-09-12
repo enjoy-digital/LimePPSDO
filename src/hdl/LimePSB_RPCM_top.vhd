@@ -312,16 +312,6 @@ begin
 -- ----------------------------------------------------------------------------
 -- Output ports
 -- ----------------------------------------------------------------------------
-
-   --DAC can be controlled from host only when GPSO is turned off
-   FPGA_SPI0_SCLK   <= RPI_SPI1_SCLK   when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_sclk;
-   FPGA_SPI0_MOSI   <= RPI_SPI1_MOSI   when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_mosi;
-   FPGA_SPI0_DAC_SS <= RPI_SPI1_SS2    when from_gpsdocfg.IICFG_EN = '0' else neo430_spi_cs;
-
-   FPGA_SYNC_OUT     <= LMK10_CLK_OUT0;
-   
-   RPI_SYNC_IN <=    'Z'            when from_gpsdocfg.IICFG_TPULSE_SEL = "10" OR from_gpsdocfg.IICFG_RPI_SYNC_IN_DIR = '0' else 
-                     GNSS_TPULSE;          -- 10 - RPI_SYNC_IN is input , else - RPI_SYNC_IN is output with GNSS_TPULSE
    
    RPI_SPI1_MISO <= rpi_spi1_miso_o when gpsdocfg_oen = '1' else 'Z';
    
