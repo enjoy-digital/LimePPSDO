@@ -94,7 +94,7 @@ class BaseSoC(SoCCore):
 
         kwargs["cpu_type"]             = "serv"
         kwargs["integrated_sram_size"] = 0x100
-        kwargs["integrated_rom_size"]  = 0x1a00
+        kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
 
         SoCCore.__init__(self, platform, sys_clk_freq, ident="LiteX SoC on LimePSB RPCM Board", **kwargs)
@@ -121,47 +121,41 @@ class BaseSoC(SoCCore):
             sys_clk_freq = sys_clk_freq
         )
 
-#        # TDD Redirection --------------------------------------------------------------------------
-#
-#        pcie_uim_pad       = platform.request("pcie_uim")
-#        fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
-#        self.comb += [
-#            fpga_rf_sw_tdd_pad.eq(pcie_uim_pad),
-#            # On hw_version = 0b01, invert TDD signal.
-#            If(hw_version == 0b01,
-#                fpga_rf_sw_tdd_pad.eq(~pcie_uim_pad)
-#            )
-#        ]
-#
-#        # GPIO Toggling (Debug) --------------------------------------------------------------------
-#
-#        counter = Signal(16)
-#        self.sync += counter.eq(counter + 1)
-#        self.comb += platform.request("fpga_gpio", 0).eq(counter[0])
-#
-#        # GNSS -------------------------------------------------------------------------------------
-#
-#        gnss_pads      = platform.request("gnss")
-#        rpi_uart0_pads = platform.request("rpi_uart0")
-#
-#        self.comb += [
-#            # GNSS Unused IOs.
-#            gnss_pads.extint.eq(0),
-#            gnss_pads.ddc_scl.eq(1),
-#            gnss_pads.ddc_sda.eq(1),
-#
-#            # GNSS Power-up (Active low reset).
-#            gnss_pads.reset.eq(1),
-#
-#            # GNSS Time Pulse.
-#            platform.request("fpga_gpio", 1).eq(gnss_pads.tpulse),
-#
-#            # GNSS UART (Connect to RPI UART0).
-#            rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
-#            gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
-#        ]
-#
-#
+        # TDD Redirection --------------------------------------------------------------------------
+
+        pcie_uim_pad       = platform.request("pcie_uim")
+        fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
+        self.comb += [
+            fpga_rf_sw_tdd_pad.eq(pcie_uim_pad),
+            # On hw_version = 0b01, invert TDD signal.
+            If(hw_version == 0b01,
+                fpga_rf_sw_tdd_pad.eq(~pcie_uim_pad)
+            )
+        ]
+
+        # GNSS -------------------------------------------------------------------------------------
+
+        gnss_pads      = platform.request("gnss")
+        rpi_uart0_pads = platform.request("rpi_uart0")
+
+        self.comb += [
+            # GNSS Unused IOs.
+            gnss_pads.extint.eq(0),
+            gnss_pads.ddc_scl.eq(1),
+            gnss_pads.ddc_sda.eq(1),
+
+            # GNSS Power-up (Active low reset).
+            gnss_pads.reset.eq(1),
+
+            # GNSS Time Pulse.
+            #platform.request("fpga_gpio", 1).eq(gnss_pads.tpulse),
+
+            # GNSS UART (Connect to RPI UART0).
+            rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
+            gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
+        ]
+
+
 #        # LimePSB RPCM top ------------------------------------------------------------------------
 #
 #        # Request Pads.
