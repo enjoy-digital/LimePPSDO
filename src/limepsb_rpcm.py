@@ -94,8 +94,8 @@ class BaseSoC(SoCCore):
 
         kwargs["cpu_type"]             = "serv"
         kwargs["integrated_sram_size"] = 0x100
-        kwargs["integrated_rom_size"]  = 0x800
-        kwargs["integrated_rom_mode"]  = "rwx"
+        kwargs["integrated_rom_size"]  = 0x1a00
+        kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
 
         SoCCore.__init__(self, platform, sys_clk_freq, ident="LiteX SoC on LimePSB RPCM Board", **kwargs)
 
