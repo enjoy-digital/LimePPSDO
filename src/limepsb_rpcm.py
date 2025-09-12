@@ -353,53 +353,6 @@ class BaseSoC(SoCCore):
             o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
         )
 
-
-#        # LimePSB RPCM top ------------------------------------------------------------------------
-#
-#        # Request Pads.
-#
-#        rpi_sync_pads  = platform.request("rpi_sync")
-#        rpi_spi1_pads  = platform.request("rpi_spi1")
-#        fpga_cfg_pads  = platform.request("fpga_cfg")
-#        fpga_i2c_pads  = platform.request("fpga_i2c")
-#        fpga_spi0_pads = platform.request("fpga_spi0")
-#
-#        # Instance.
-#
-#        self.specials += Instance("LimePSB_RPCM_top",
-#            i_SYS_CLK           = ClockSignal("sys"),
-#            i_SYS_RST_N         = ~ResetSignal("sys"),
-#
-#            # Clocks
-#            i_LMK10_CLK_OUT0    = platform.request("lmk10_clk_out0"),
-#            i_LMKRF_CLK_OUT4    = platform.request("lmkrf_clk_out4"),
-#
-#            # RPI
-#            io_RPI_SYNC_IN      = rpi_sync_pads.i,
-#            i_RPI_SYNC_OUT      = rpi_sync_pads.o,
-#            i_RPI_SPI1_SCLK     = rpi_spi1_pads.sclk,
-#            i_RPI_SPI1_MOSI     = rpi_spi1_pads.mosi,
-#            o_RPI_SPI1_MISO     = rpi_spi1_pads.miso,
-#            i_RPI_SPI1_SS1      = rpi_spi1_pads.ss1,
-#            i_RPI_SPI1_SS2      = rpi_spi1_pads.ss2,
-#
-#            # FPGA
-#            io_FPGA_GPIO        = Open(),
-#            io_FPGA_CFG_SPI_SCK = fpga_cfg_pads.sck,
-#            io_FPGA_CFG_SPI_SI  = fpga_cfg_pads.si,
-#            io_FPGA_CFG_SPI_SO  = fpga_cfg_pads.so,
-#            i_FPGA_CFG_SPI_CSN  = fpga_cfg_pads.csn,
-#            io_FPGA_I2C_SCL     = fpga_i2c_pads.scl,
-#            io_FPGA_I2C_SDA     = fpga_i2c_pads.sda,
-#            o_FPGA_SYNC_OUT     = platform.request("fpga_sync_out"),
-#            o_FPGA_SPI0_SCLK    = fpga_spi0_pads.sclk,
-#            o_FPGA_SPI0_MOSI    = fpga_spi0_pads.mosi,
-#            o_FPGA_SPI0_DAC_SS  = fpga_spi0_pads.dac_ss,
-#
-#            # GNSS
-#            i_GNSS_TPULSE       = gnss_pads.tpulse,
-#        )
-#
         # PPS Detector VHD2V Converter.
         # -----------------------------
         self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
@@ -453,22 +406,6 @@ class BaseSoC(SoCCore):
         self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
         self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
 
-#        # LimePSB_RPCM_top VHD2V Converter.
-#        # ---------------------------------
-#        self.vhd2v_converter_limepsb_rpcm_top = VHD2VConverter(self.platform,
-#            top_entity     = "LimePSB_RPCM_top",
-#            build_dir      = os.path.abspath(os.path.dirname(__file__)),
-#            work_package   = "work",
-#            force_convert  = True,
-#            add_instance   = False,
-#            flatten_source = False,
-#            params         = {}
-#        )
-#        self.vhd2v_converter_limepsb_rpcm_top.add_source("hdl/spi/gpsdocfg_pkg.vhd")
-#        self.vhd2v_converter_limepsb_rpcm_top.add_source("hdl/LimePSB_RPCM_top.vhd")
-#        self.vhd2v_converter_limepsb_rpcm_top._ghdl_opts.append("-fsynopsys")
-#
-#        self.platform.toolchain._pnr_opts += " --ignore-loops"
 
 # Build --------------------------------------------------------------------------------------------
 def main():
