@@ -86,9 +86,25 @@ architecture arch of gpsdocfg is
    signal oe: std_logic;                              -- Tri state buffers control
    signal spi_config_data_rev : std_logic_vector(143 downto 0);
 
-   -- Components
-   use work.mcfg_components.mcfg32wm_fsm;
-   for all: mcfg32wm_fsm use entity work.mcfg32wm_fsm(mcfg32wm_fsm_arch);
+
+   component mcfg32wm_fsm
+      port(
+         address: in std_logic_vector(9 downto 0); -- Hardware address
+         mimo_en: in std_logic;
+         inst_reg: in std_logic_vector(15 downto 0);  -- Instruction register (read only here)
+         sclk: in std_logic;           -- Serial clock
+         sen: in std_logic;            -- Serial enable
+         reset: in std_logic;          -- Reset
+         inst_reg_en: out std_logic;         -- Instruction register enable
+         din_reg_en: out std_logic;       -- Data in register enable
+         dout_reg_sen: out std_logic;        -- Data out register shift enable
+         dout_reg_len: out std_logic;        -- Data out register load enable
+         mem_we: out std_logic;           -- Memory write enable
+         oe: out std_logic          -- Output enable
+         --stateo: out std_logic_vector(5 downto 0)
+      );
+   end component;
+
 begin
    ---------------------------------------------------------------------------------------------
    -- To avoid optimizations

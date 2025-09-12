@@ -363,7 +363,6 @@ class BaseSoC(SoCCore):
         self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/revisions.vhd")
         self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/gpsdocfg.vhd")
         self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mcfg32wm_fsm.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mcfg_components.vhd")
         self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mem_package.vhd")
         self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
 
