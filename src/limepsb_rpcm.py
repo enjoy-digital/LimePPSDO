@@ -23,6 +23,9 @@ from litex.soc.cores.clock import *
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
 
+from litex.soc.integration.soc import SoCRegion
+from litex.soc.interconnect import wishbone
+
 from litex.soc.cores.led import LedChaser
 
 from limepsb_rpcm_platform import Platform
@@ -93,6 +96,7 @@ class BaseSoC(SoCCore):
         # SoCCore ----------------------------------------------------------------------------------
 
         kwargs["cpu_type"]             = "serv"
+        kwargs["with_timer"]           = False # FIXME? Enable back?
         kwargs["integrated_sram_size"] = 0x100
         kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
@@ -285,18 +289,70 @@ class BaseSoC(SoCCore):
             )
         ]
 
-        # FPGA_SYNC_OUT
-        self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
+        # FIXME: Handle: RPI_SPI1_MISO sharing.
 
-        # RPI_SYNC_IN.
-        from litex.build.io import SDRTristate
-        self.specials += SDRTristate(
-            io  = rpi_sync_pads.i,
-            i   = Open(),
-            o   = gnss_pads.tpulse,
-            oe  = ~((gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out == 0) | (gpsdocfg_IICFG_TPULSE_SEL_out == 0b10)),
-            clk = ClockSignal("sys"),
+#        # FPGA_SYNC_OUT
+#        self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
+#
+#        # RPI_SYNC_IN.
+#        from litex.build.io import SDRTristate
+#        self.specials += SDRTristate(
+#            io  = rpi_sync_pads.i,
+#            i   = Open(),
+#            o   = gnss_pads.tpulse,
+#            oe  = ~((gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out == 0) | (gpsdocfg_IICFG_TPULSE_SEL_out == 0b10)),
+#            clk = ClockSignal("sys"),
+#        )
+
+        # VCXO Tamer -------------------------------------------------------------------------------
+
+        self.vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
+        self.bus.add_slave("vcxo_tamer", self.vctcxo_tamer_bus, region=SoCRegion(size=0x100))
+
+        vctcxo_tamer_pps_1s_error    = Signal(32)
+        vctcxo_tamer_pps_10s_error   = Signal(32)
+        vctcxo_tamer_pps_100s_error  = Signal(32)
+        vctcxo_tamer_accuracy        = Signal(4)
+        vctcxo_tamer_state           = Signal(4)
+        vctcxo_tamer_dac_tuned_val   = Signal(16)
+        vctcxo_tamer_wb_int          = Signal()
+
+        self.specials += Instance("vctcxo_tamer",
+            # Physical Interface
+            i_tune_ref           = tpulse_internal,
+            i_vctcxo_clock       = vctcxo_clk,
+
+            # Wishbone Interface (connected to dedicated bus)
+            i_wb_clk_i           = ClockSignal("sys"),
+            i_wb_rst_i           = ResetSignal("sys"),
+            i_wb_adr_i           = self.vctcxo_tamer_bus.adr,
+            i_wb_dat_i           = self.vctcxo_tamer_bus.dat_w,
+            o_wb_dat_o           = self.vctcxo_tamer_bus.dat_r,
+            i_wb_we_i            = self.vctcxo_tamer_bus.we,
+            i_wb_stb_i           = self.vctcxo_tamer_bus.stb,
+            o_wb_ack_o           = self.vctcxo_tamer_bus.ack,
+            i_wb_cyc_i           = self.vctcxo_tamer_bus.cyc,
+
+            # Wishbone Interrupt
+            o_wb_int_o           = vctcxo_tamer_wb_int,
+
+            # Configuration inputs from gpsdocfg
+            i_PPS_1S_TARGET       = gpsdocfg_IICFG_1S_TARGET_out,
+            i_PPS_1S_ERROR_TOL    = Cat(Signal(16, reset=0), gpsdocfg_IICFG_1S_TOL_out),
+            i_PPS_10S_TARGET      = gpsdocfg_IICFG_10S_TARGET_out,
+            i_PPS_10S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_IICFG_10S_TOL_out),
+            i_PPS_100S_TARGET     = gpsdocfg_IICFG_100S_TARGET_out,
+            i_PPS_100S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_IICFG_100S_TOL_out),
+
+            # Status outputs
+            o_pps_1s_error       = vctcxo_tamer_pps_1s_error,
+            o_pps_10s_error      = vctcxo_tamer_pps_10s_error,
+            o_pps_100s_error     = vctcxo_tamer_pps_100s_error,
+            o_accuracy           = vctcxo_tamer_accuracy,
+            o_state              = vctcxo_tamer_state,
+            o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
         )
+
 
 #        # LimePSB RPCM top ------------------------------------------------------------------------
 #
