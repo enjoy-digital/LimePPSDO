@@ -155,6 +155,68 @@ class BaseSoC(SoCCore):
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
+        # GPSDOCFG ---------------------------------------------------------------------------------
+
+        gpsdocfg_PPS_1S_ERROR_in   = Signal(32, reset=0x12345678)
+        gpsdocfg_PPS_10S_ERROR_in  = Signal(32, reset=0x9ABCDEF0)
+        gpsdocfg_PPS_100S_ERROR_in = Signal(32, reset=0x55555555)
+        gpsdocfg_DAC_TUNED_VAL_in  = Signal(16, reset=0x1234)
+        gpsdocfg_ACCURACY_in       = Signal(4, reset=0b0101)
+        gpsdocfg_STATE_in          = Signal(4, reset=0b1010)
+        gpsdocfg_TPULSE_ACTIVE_in  = Signal(reset=1)
+
+        # Add signals for gpsdocfg outputs
+        gpsdocfg_IICFG_EN_out              = Signal()
+        gpsdocfg_IICFG_CLK_SEL_out         = Signal()
+        gpsdocfg_IICFG_TPULSE_SEL_out      = Signal(2)
+        gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out = Signal()
+        gpsdocfg_IICFG_1S_TARGET_out       = Signal(32)
+        gpsdocfg_IICFG_1S_TOL_out          = Signal(16)
+        gpsdocfg_IICFG_10S_TARGET_out      = Signal(32)
+        gpsdocfg_IICFG_10S_TOL_out         = Signal(16)
+        gpsdocfg_IICFG_100S_TARGET_out     = Signal(32)
+        gpsdocfg_IICFG_100S_TOL_out        = Signal(16)
+
+        rpi_spi1_pads  = platform.request("rpi_spi1")
+
+        self.specials += Instance("gpsdocfg",
+            # Address and location of this module
+            i_maddress                  = 0, # Will be hard wired at the top level
+            i_mimo_en                   = 1, # MIMO enable, from TOP SPI (always 1)
+
+            # Serial port IOs
+            i_sdin                      = rpi_spi1_pads.mosi,
+            i_sclk                      = rpi_spi1_pads.sclk,
+            i_sen                       = rpi_spi1_pads.ss1,
+            o_sdout                     = rpi_spi1_pads.miso,
+
+            # Signals coming from the pins or top level serial interface
+            i_lreset                    = ResetSignal("sys"),
+            i_mreset                    = ResetSignal("sys"),
+
+            o_oen                       = Signal(),  # Not connected
+
+            # Inputs (formerly in t_TO_GPSDOCFG)
+            i_PPS_1S_ERROR_in           = gpsdocfg_PPS_1S_ERROR_in,
+            i_PPS_10S_ERROR_in          = gpsdocfg_PPS_10S_ERROR_in,
+            i_PPS_100S_ERROR_in         = gpsdocfg_PPS_100S_ERROR_in,
+            i_DAC_TUNED_VAL_in          = gpsdocfg_DAC_TUNED_VAL_in,
+            i_ACCURACY_in               = gpsdocfg_ACCURACY_in,
+            i_STATE_in                  = gpsdocfg_STATE_in,
+            i_TPULSE_ACTIVE_in          = gpsdocfg_TPULSE_ACTIVE_in,
+
+            # Outputs (formerly in t_FROM_GPSDOCFG)
+            o_IICFG_EN_out              = gpsdocfg_IICFG_EN_out,
+            o_IICFG_CLK_SEL_out         = gpsdocfg_IICFG_CLK_SEL_out,
+            o_IICFG_TPULSE_SEL_out      = gpsdocfg_IICFG_TPULSE_SEL_out,
+            o_IICFG_RPI_SYNC_IN_DIR_out = gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out,
+            o_IICFG_1S_TARGET_out       = gpsdocfg_IICFG_1S_TARGET_out,
+            o_IICFG_1S_TOL_out          = gpsdocfg_IICFG_1S_TOL_out,
+            o_IICFG_10S_TARGET_out      = gpsdocfg_IICFG_10S_TARGET_out,
+            o_IICFG_10S_TOL_out         = gpsdocfg_IICFG_10S_TOL_out,
+            o_IICFG_100S_TARGET_out     = gpsdocfg_IICFG_100S_TARGET_out,
+            o_IICFG_100S_TOL_out        = gpsdocfg_IICFG_100S_TOL_out
+        )
 
 #        # LimePSB RPCM top ------------------------------------------------------------------------
 #
