@@ -69,13 +69,14 @@ class _CRG(LiteXModule):
 
 # BaseSoC ------------------------------------------------------------------------------------------
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=10e6, with_vcxo_tamer=False, **kwargs):
+    def __init__(self, sys_clk_freq=6e6, **kwargs):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
 
         kwargs["cpu_type"]             = "serv"
-        kwargs["with_timer"]           = True
+        kwargs["with_timer"]           = False
+        kwargs["with_ctrl"]            = False
         kwargs["integrated_sram_size"] = 0x100
         kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
@@ -320,88 +321,88 @@ class BaseSoC(SoCCore):
         # FPGA_SYNC_OUT.
         self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
 
-        # RPI_SYNC_IN.
-        from litex.build.io import SDRTristate
-        self.specials += SDRTristate(
-            io  = rpi_sync_pads.i,
-            i   = Open(),
-            o   = gnss_pads.tpulse,
-            oe  = ~((gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out == 0) | (gpsdocfg_IICFG_TPULSE_SEL_out == 0b10)),
-            clk = ClockSignal("sys"),
-        )
+#        # RPI_SYNC_IN.
+#        from litex.build.io import SDRTristate
+#        self.specials += SDRTristate(
+#            io  = rpi_sync_pads.i,
+#            i   = Open(),
+#            o   = gnss_pads.tpulse,
+#            oe  = ~((gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out == 0) | (gpsdocfg_IICFG_TPULSE_SEL_out == 0b10)),
+#            clk = ClockSignal("sys"),
+#        )
 
         # VCXO Tamer -------------------------------------------------------------------------------
 
+        # Signals.
+        # --------
+        vctcxo_tamer_pps_1s_error    = Signal(32)
+        vctcxo_tamer_pps_10s_error   = Signal(32)
+        vctcxo_tamer_pps_100s_error  = Signal(32)
+        vctcxo_tamer_accuracy        = Signal(4)
+        vctcxo_tamer_state           = Signal(4)
+        vctcxo_tamer_dac_tuned_val   = Signal(16)
+        vctcxo_tamer_wb_int          = Signal()
+
+        # MMAP (Wishbone).
+        # ----------------
         vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
         self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x100))
 
-        if with_vcxo_tamer:
+        # Instance.
+        # ---------
+        self.specials += Instance("vctcxo_tamer",
+            # Physical Interface
+            i_tune_ref           = tpulse_internal,
+            i_vctcxo_clock       = vctcxo_clk,
 
-            # Signals.
-            # --------
-            vctcxo_tamer_pps_1s_error    = Signal(32)
-            vctcxo_tamer_pps_10s_error   = Signal(32)
-            vctcxo_tamer_pps_100s_error  = Signal(32)
-            vctcxo_tamer_accuracy        = Signal(4)
-            vctcxo_tamer_state           = Signal(4)
-            vctcxo_tamer_dac_tuned_val   = Signal(16)
-            vctcxo_tamer_wb_int          = Signal()
+            # Wishbone Interface (connected to dedicated bus)
+            i_wb_clk_i           = ClockSignal("sys"),
+            i_wb_rst_i           = ResetSignal("sys"),
+            i_wb_adr_i           = vctcxo_tamer_bus.adr,
+            i_wb_dat_i           = vctcxo_tamer_bus.dat_w,
+            o_wb_dat_o           = vctcxo_tamer_bus.dat_r,
+            i_wb_we_i            = vctcxo_tamer_bus.we,
+            i_wb_stb_i           = vctcxo_tamer_bus.stb,
+            o_wb_ack_o           = vctcxo_tamer_bus.ack,
+            i_wb_cyc_i           = vctcxo_tamer_bus.cyc,
 
-            # Instance.
-            # ---------
-            self.specials += Instance("vctcxo_tamer",
-                # Physical Interface
-                i_tune_ref           = tpulse_internal,
-                i_vctcxo_clock       = vctcxo_clk,
+            # Wishbone Interrupt
+            o_wb_int_o           = vctcxo_tamer_wb_int,
 
-                # Wishbone Interface (connected to dedicated bus)
-                i_wb_clk_i           = ClockSignal("sys"),
-                i_wb_rst_i           = ResetSignal("sys"),
-                i_wb_adr_i           = vctcxo_tamer_bus.adr,
-                i_wb_dat_i           = vctcxo_tamer_bus.dat_w,
-                o_wb_dat_o           = vctcxo_tamer_bus.dat_r,
-                i_wb_we_i            = vctcxo_tamer_bus.we,
-                i_wb_stb_i           = vctcxo_tamer_bus.stb,
-                o_wb_ack_o           = vctcxo_tamer_bus.ack,
-                i_wb_cyc_i           = vctcxo_tamer_bus.cyc,
+            # Configuration inputs from gpsdocfg
+            i_PPS_1S_TARGET      = gpsdocfg_IICFG_1S_TARGET_out,
+            i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_IICFG_1S_TOL_out),
+            i_PPS_10S_TARGET     = gpsdocfg_IICFG_10S_TARGET_out,
+            i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_IICFG_10S_TOL_out),
+            i_PPS_100S_TARGET    = gpsdocfg_IICFG_100S_TARGET_out,
+            i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdocfg_IICFG_100S_TOL_out),
 
-                # Wishbone Interrupt
-                o_wb_int_o           = vctcxo_tamer_wb_int,
+            # Status outputs
+            o_pps_1s_error       = vctcxo_tamer_pps_1s_error,
+            o_pps_10s_error      = vctcxo_tamer_pps_10s_error,
+            o_pps_100s_error     = vctcxo_tamer_pps_100s_error,
+            o_accuracy           = vctcxo_tamer_accuracy,
+            o_state              = vctcxo_tamer_state,
+            o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
+        )
 
-                # Configuration inputs from gpsdocfg
-                i_PPS_1S_TARGET      = gpsdocfg_IICFG_1S_TARGET_out,
-                i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_IICFG_1S_TOL_out),
-                i_PPS_10S_TARGET     = gpsdocfg_IICFG_10S_TARGET_out,
-                i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_IICFG_10S_TOL_out),
-                i_PPS_100S_TARGET    = gpsdocfg_IICFG_100S_TARGET_out,
-                i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdocfg_IICFG_100S_TOL_out),
-
-                # Status outputs
-                o_pps_1s_error       = vctcxo_tamer_pps_1s_error,
-                o_pps_10s_error      = vctcxo_tamer_pps_10s_error,
-                o_pps_100s_error     = vctcxo_tamer_pps_100s_error,
-                o_accuracy           = vctcxo_tamer_accuracy,
-                o_state              = vctcxo_tamer_state,
-                o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
-            )
-
-            # VHD2V Conversion.
-            # -----------------
-            self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
-                top_entity     = "vctcxo_tamer",
-                build_dir      = os.path.abspath(os.path.dirname(__file__)),
-                work_package   = "work",
-                force_convert  = True,
-                add_instance   = False,
-                flatten_source = False,
-                params         = {}
-            )
-            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector_fixed.vhd")
-            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/handshake.vhd")
-            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
-            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
-            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
-            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
+        # VHD2V Conversion.
+        # -----------------
+        self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
+            top_entity     = "vctcxo_tamer",
+            build_dir      = os.path.abspath(os.path.dirname(__file__)),
+            work_package   = "work",
+            force_convert  = True,
+            add_instance   = False,
+            flatten_source = False,
+            params         = {}
+        )
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector_fixed.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/handshake.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
+        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
 
 # Build --------------------------------------------------------------------------------------------
 def main():
