@@ -79,7 +79,6 @@ class BaseSoC(SoCCore):
         kwargs["integrated_sram_size"] = 0x100
         kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
-        kwargs["uart_name"]            = "stub"
 
         SoCCore.__init__(self, platform, sys_clk_freq, ident="LiteX SoC on LimePSB RPCM Board", **kwargs)
 
@@ -135,8 +134,8 @@ class BaseSoC(SoCCore):
             #platform.request("fpga_gpio", 1).eq(gnss_pads.tpulse),
 
             # GNSS UART (Connect to RPI UART0).
-            #rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
-            #gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
+            rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
+            gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
         # Clocks -----------------------------------------------------------------------------------
@@ -259,8 +258,6 @@ class BaseSoC(SoCCore):
 
         # SPI Sharing Logic ------------------------------------------------------------------------
 
-        serial_pads = platform.request("serial")
-
         fpga_spi0_pads = platform.request("fpga_spi0")
 
         self.comb += [
@@ -277,10 +274,6 @@ class BaseSoC(SoCCore):
                 fpga_spi0_pads.mosi.eq(spi_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
             #),
-
-            rpi_uart0_pads.rx.eq(spi_pads.clk),
-            serial_pads.tx.eq(spi_pads.cs_n),
-            serial_pads.rx.eq(spi_pads.mosi),
         ]
 
 #        # FPGA_SYNC_OUT
