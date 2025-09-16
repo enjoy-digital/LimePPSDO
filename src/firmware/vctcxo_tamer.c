@@ -1,6 +1,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <generated/mem.h>
+
 #include "vctcxo_tamer.h"
 
 /* Define a cached version of the VCTCXO tamer control register */
@@ -14,11 +16,11 @@ uint8_t vctcxo_tamer_ctrl_reg = 0x00;
 uint16_t vctcxo_trim_dac_value = 0x77FA;
 
 uint8_t vctcxo_tamer_read(uint8_t addr) {
-    return 0; /* FIXME: Add Mem Read */
+    return *(volatile uint8_t *)(VCTCXO_TAMER_BASE + addr);
 }
 
 void vctcxo_tamer_write(uint8_t addr, uint8_t data) {
-    /* FIXME: Add Mem Write */
+    *(volatile uint8_t *)(VCTCXO_TAMER_BASE + addr) = data;
 }
 
 void vctcxo_tamer_reset_counters(bool reset) {
