@@ -129,7 +129,7 @@ static void reboot_cmd(void)
 #define SPI_DONE    (1 << 0)
 #define SPI_LENGTH  (1 << 8)
 
-void Control_TCXO_DAC(uint8_t pd, uint16_t data) {
+static void Control_TCXO_DAC(uint8_t pd, uint16_t data) {
 	uint32_t word;
 
 	/* Prepare Word */

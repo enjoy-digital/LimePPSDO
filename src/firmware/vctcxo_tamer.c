@@ -1,10 +1,7 @@
 #include <stdbool.h>
 #include <stdint.h>
-#include "vctcxo_tamer.h"
-#include <neo430.h>
-//#include "xparameters.h"
-//#include "xil_io.h"
 
+#include "vctcxo_tamer.h"
 
 /* Define a cached version of the VCTCXO tamer control register */
 uint8_t vctcxo_tamer_ctrl_reg = 0x00;
@@ -17,56 +14,11 @@ uint8_t vctcxo_tamer_ctrl_reg = 0x00;
 uint16_t vctcxo_trim_dac_value = 0x77FA;
 
 uint8_t vctcxo_tamer_read(uint8_t addr) {
-    //TODO: replace with neo430 wishbone functions
-    //return (uint8_t)Xil_In8(XPAR_AVMM_M0_BASEADDR + addr);
-    neo430_wishbone32_read_start((uint32_t) addr);
-
-    uint16_t timeout = 0;
-
-    while(1){
-      if (!neo430_wishbone_busy())
-        break;
-      if (timeout++ == 100) {
-        #ifdef DEBUG_PRINT
-            neo430_uart_br_print("\nError! Device not responding! Press key to proceed.\n");
-        #endif
-        neo430_wishbone_terminate(); // terminate current transfer
-        #ifdef DEBUG_PRINT
-            while(!neo430_uart_char_received());
-        #endif
-        return 0;
-      }
-    }
-
-    return (uint8_t)neo430_wishbone32_get_data();
-
+    return 0; /* FIXME: Add Mem Read */
 }
 
 void vctcxo_tamer_write(uint8_t addr, uint8_t data) {
-    //TODO: replace with neo430 wishbone functions
-    //Xil_Out8(XPAR_AVMM_M0_BASEADDR+addr, data);
-
-    neo430_wishbone32_write_start((uint32_t)addr, (uint32_t)data);
-
-      // wait for transfer to finish
-    uint16_t timeout = 0;
-    while(1){
-        if (!neo430_wishbone_busy())
-         break;
-        if (timeout++ == 100) {
-            #ifdef DEBUG_PRINT
-                neo430_uart_br_print("\nError! Device not responding! Press key to proceed.\n");
-            #endif
-            neo430_wishbone_terminate(); // terminate current transfer
-            #ifdef DEBUG_PRINT
-                while(!neo430_uart_char_received());
-            #endif
-            return;
-        }
-    }
-
-
-
+    /* FIXME: Add Mem Write */
 }
 
 void vctcxo_tamer_reset_counters(bool reset) {
