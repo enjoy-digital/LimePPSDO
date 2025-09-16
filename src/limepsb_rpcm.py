@@ -158,7 +158,7 @@ class BaseSoC(SoCCore):
         gpsdocfg_TPULSE_ACTIVE_in  = Signal(reset=1)
 
         # Add signals for gpsdocfg outputs
-        gpsdocfg_IICFG_EN_out              = Signal()
+        gpsdocfg_IICFG_EN_out              = Signal(reset=1) # FIXME: For test, remove.
         gpsdocfg_IICFG_CLK_SEL_out         = Signal()
         gpsdocfg_IICFG_TPULSE_SEL_out      = Signal(2)
         gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out = Signal()
@@ -198,7 +198,7 @@ class BaseSoC(SoCCore):
             i_TPULSE_ACTIVE_in          = gpsdocfg_TPULSE_ACTIVE_in,
 
             # Outputs (formerly in t_FROM_GPSDOCFG)
-            o_IICFG_EN_out              = gpsdocfg_IICFG_EN_out,
+            #o_IICFG_EN_out              = gpsdocfg_IICFG_EN_out, # FIXME: For test, remove.
             o_IICFG_CLK_SEL_out         = gpsdocfg_IICFG_CLK_SEL_out,
             o_IICFG_TPULSE_SEL_out      = gpsdocfg_IICFG_TPULSE_SEL_out,
             o_IICFG_RPI_SYNC_IN_DIR_out = gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out,
@@ -262,18 +262,18 @@ class BaseSoC(SoCCore):
 
         self.comb += [
             # SPI0 controlled from Rpi.
-            #If(gpsdocfg_IICFG_EN_out == 0b0,
-            #    fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
-            #    fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
-            #    fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
-            #),
+            If(gpsdocfg_IICFG_EN_out == 0b0,
+                fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
+                fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
+            ),
 
             # SPI0 controlled from CPU.
-            #If(gpsdocfg_IICFG_EN_out == 0b1,
+            If(gpsdocfg_IICFG_EN_out == 0b1,
                 fpga_spi0_pads.sclk.eq(spi_pads.clk),
                 fpga_spi0_pads.mosi.eq(spi_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
-            #),
+            ),
         ]
 
 #        # FPGA_SYNC_OUT
