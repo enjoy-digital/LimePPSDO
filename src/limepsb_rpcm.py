@@ -69,16 +69,17 @@ class _CRG(LiteXModule):
 
 # BaseSoC ------------------------------------------------------------------------------------------
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=10e6, **kwargs):
+    def __init__(self, sys_clk_freq=10e6, with_vcxo_tamer=False, **kwargs):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
 
         kwargs["cpu_type"]             = "serv"
-        kwargs["with_timer"]           = False # FIXME? Enable back?
+        kwargs["with_timer"]           = True
         kwargs["integrated_sram_size"] = 0x100
         kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
+        kwargs["uart_name"]            = "stub"
 
         SoCCore.__init__(self, platform, sys_clk_freq, ident="LiteX SoC on LimePSB RPCM Board", **kwargs)
 
@@ -134,8 +135,8 @@ class BaseSoC(SoCCore):
             #platform.request("fpga_gpio", 1).eq(gnss_pads.tpulse),
 
             # GNSS UART (Connect to RPI UART0).
-            rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
-            gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
+            #rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
+            #gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
         # Clocks -----------------------------------------------------------------------------------
@@ -250,24 +251,36 @@ class BaseSoC(SoCCore):
             o_pps_active = pps_active
         )
 
-        # SPI0 (DAC) Sharing Logic -------------------------------------------------------------------
+        # SPI Master (AD5662 DAC) ------------------------------------------------------------------
+
+        spi_pads = Record([("clk", 1), ("cs_n", 1), ("mosi", 1), ("miso", 1)])
+
+        self.add_spi_master(name="spi", pads=spi_pads, data_width=24, spi_clk_freq=1e6)
+
+        # SPI Sharing Logic ------------------------------------------------------------------------
+
+        serial_pads = platform.request("serial")
 
         fpga_spi0_pads = platform.request("fpga_spi0")
 
         self.comb += [
             # SPI0 controlled from Rpi.
-            If(gpsdocfg_IICFG_EN_out == 0b0,
-                fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
-                fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
-                fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
-            ),
+            #If(gpsdocfg_IICFG_EN_out == 0b0,
+            #    fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
+            #    fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
+            #    fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
+            #),
 
             # SPI0 controlled from CPU.
-            If(gpsdocfg_IICFG_EN_out == 0b1,
-                fpga_spi0_pads.sclk.eq(0),   # FIXME: Connect.
-                fpga_spi0_pads.mosi.eq(0),   # FIXME: Connect.
-                fpga_spi0_pads.dac_ss.eq(0), # FIXME: Connect.
-            ),
+            #If(gpsdocfg_IICFG_EN_out == 0b1,
+                fpga_spi0_pads.sclk.eq(spi_pads.clk),
+                fpga_spi0_pads.mosi.eq(spi_pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
+            #),
+
+            rpi_uart0_pads.rx.eq(spi_pads.clk),
+            serial_pads.tx.eq(spi_pads.cs_n),
+            serial_pads.rx.eq(spi_pads.mosi),
         ]
 
 #        # FPGA_SYNC_OUT
@@ -285,52 +298,54 @@ class BaseSoC(SoCCore):
 
         # VCXO Tamer -------------------------------------------------------------------------------
 
-        vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
-        self.bus.add_slave("vcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x100))
+        if with_vcxo_tamer:
 
-        vctcxo_tamer_pps_1s_error    = Signal(32)
-        vctcxo_tamer_pps_10s_error   = Signal(32)
-        vctcxo_tamer_pps_100s_error  = Signal(32)
-        vctcxo_tamer_accuracy        = Signal(4)
-        vctcxo_tamer_state           = Signal(4)
-        vctcxo_tamer_dac_tuned_val   = Signal(16)
-        vctcxo_tamer_wb_int          = Signal()
+            vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
+            self.bus.add_slave("vcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x100))
 
-        self.specials += Instance("vctcxo_tamer",
-            # Physical Interface
-            i_tune_ref           = tpulse_internal,
-            i_vctcxo_clock       = vctcxo_clk,
+            vctcxo_tamer_pps_1s_error    = Signal(32)
+            vctcxo_tamer_pps_10s_error   = Signal(32)
+            vctcxo_tamer_pps_100s_error  = Signal(32)
+            vctcxo_tamer_accuracy        = Signal(4)
+            vctcxo_tamer_state           = Signal(4)
+            vctcxo_tamer_dac_tuned_val   = Signal(16)
+            vctcxo_tamer_wb_int          = Signal()
 
-            # Wishbone Interface (connected to dedicated bus)
-            i_wb_clk_i           = ClockSignal("sys"),
-            i_wb_rst_i           = ResetSignal("sys"),
-            i_wb_adr_i           = vctcxo_tamer_bus.adr,
-            i_wb_dat_i           = vctcxo_tamer_bus.dat_w,
-            o_wb_dat_o           = vctcxo_tamer_bus.dat_r,
-            i_wb_we_i            = vctcxo_tamer_bus.we,
-            i_wb_stb_i           = vctcxo_tamer_bus.stb,
-            o_wb_ack_o           = vctcxo_tamer_bus.ack,
-            i_wb_cyc_i           = vctcxo_tamer_bus.cyc,
+            self.specials += Instance("vctcxo_tamer",
+                # Physical Interface
+                i_tune_ref           = tpulse_internal,
+                i_vctcxo_clock       = vctcxo_clk,
 
-            # Wishbone Interrupt
-            o_wb_int_o           = vctcxo_tamer_wb_int,
+                # Wishbone Interface (connected to dedicated bus)
+                i_wb_clk_i           = ClockSignal("sys"),
+                i_wb_rst_i           = ResetSignal("sys"),
+                i_wb_adr_i           = vctcxo_tamer_bus.adr,
+                i_wb_dat_i           = vctcxo_tamer_bus.dat_w,
+                o_wb_dat_o           = vctcxo_tamer_bus.dat_r,
+                i_wb_we_i            = vctcxo_tamer_bus.we,
+                i_wb_stb_i           = vctcxo_tamer_bus.stb,
+                o_wb_ack_o           = vctcxo_tamer_bus.ack,
+                i_wb_cyc_i           = vctcxo_tamer_bus.cyc,
 
-            # Configuration inputs from gpsdocfg
-            i_PPS_1S_TARGET      = gpsdocfg_IICFG_1S_TARGET_out,
-            i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_IICFG_1S_TOL_out),
-            i_PPS_10S_TARGET     = gpsdocfg_IICFG_10S_TARGET_out,
-            i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_IICFG_10S_TOL_out),
-            i_PPS_100S_TARGET    = gpsdocfg_IICFG_100S_TARGET_out,
-            i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdocfg_IICFG_100S_TOL_out),
+                # Wishbone Interrupt
+                o_wb_int_o           = vctcxo_tamer_wb_int,
 
-            # Status outputs
-            o_pps_1s_error       = vctcxo_tamer_pps_1s_error,
-            o_pps_10s_error      = vctcxo_tamer_pps_10s_error,
-            o_pps_100s_error     = vctcxo_tamer_pps_100s_error,
-            o_accuracy           = vctcxo_tamer_accuracy,
-            o_state              = vctcxo_tamer_state,
-            o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
-        )
+                # Configuration inputs from gpsdocfg
+                i_PPS_1S_TARGET      = gpsdocfg_IICFG_1S_TARGET_out,
+                i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_IICFG_1S_TOL_out),
+                i_PPS_10S_TARGET     = gpsdocfg_IICFG_10S_TARGET_out,
+                i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_IICFG_10S_TOL_out),
+                i_PPS_100S_TARGET    = gpsdocfg_IICFG_100S_TARGET_out,
+                i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdocfg_IICFG_100S_TOL_out),
+
+                # Status outputs
+                o_pps_1s_error       = vctcxo_tamer_pps_1s_error,
+                o_pps_10s_error      = vctcxo_tamer_pps_10s_error,
+                o_pps_100s_error     = vctcxo_tamer_pps_100s_error,
+                o_accuracy           = vctcxo_tamer_accuracy,
+                o_state              = vctcxo_tamer_state,
+                o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
+            )
 
         # VHDL -> Verilog Conversion ---------------------------------------------------------------
 

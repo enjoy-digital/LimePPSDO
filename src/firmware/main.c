@@ -112,6 +112,30 @@ static void reboot_cmd(void)
 {
 	ctrl_reset_write(1);
 }
+#define SPI_START   (1 << 0)
+#define SPI_DONE    (1 << 0)
+#define SPI_LENGTH  (1 << 8)
+
+static void dac_spi_xfer(uint32_t word) {
+    /* Write word on MOSI */
+    spi_mosi_write(word);
+    /* Initiate SPI Xfer */
+    spi_control_write(24*SPI_LENGTH | SPI_START);
+    /* Wait SPI Xfer to be done */
+    while(spi_status_read() != SPI_DONE);
+}
+
+static void dac_test(void)
+{
+	int i;
+	while (1) {
+		dac_spi_xfer(65535);
+		busy_wait(1000);
+		dac_spi_xfer(0);
+		busy_wait(1000);
+	}
+}
+
 
 /*-----------------------------------------------------------------------*/
 /* Console service / Main                                                */
@@ -143,6 +167,7 @@ int main(void)
 
 	help();
 	prompt();
+	dac_test();
 
 	while(1) {
 		console_service();
