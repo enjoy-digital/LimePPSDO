@@ -112,26 +112,45 @@ static void reboot_cmd(void)
 {
 	ctrl_reset_write(1);
 }
+
+/**
+ * @brief Controls the TCXO DAC via SPI by sending configuration data.
+ *
+ * This function enables SPI communication, sends configuration data to the TCXO DAC,
+ * and disables SPI communication afterward. The configuration consists of two parts:
+ *  - The two least significant bits of `pd` are sent in the first SPI transfer.
+ *  - The 16-bit `data` is sent in two subsequent SPI transfers (upper byte first, then lower byte).
+ *
+ * @param pd A 8-bit value where only the two least significant bits (LSBs) are used.
+ * @param data A 16-bit value to be transmitted to the DAC in two parts (MSB and LSB).
+ */
+
 #define SPI_START   (1 << 0)
 #define SPI_DONE    (1 << 0)
 #define SPI_LENGTH  (1 << 8)
 
-static void dac_spi_xfer(uint32_t word) {
-    /* Write word on MOSI */
-    spi_mosi_write(word);
-    /* Initiate SPI Xfer */
-    spi_control_write(24*SPI_LENGTH | SPI_START);
-    /* Wait SPI Xfer to be done */
-    while(spi_status_read() != SPI_DONE);
+void Control_TCXO_DAC(uint8_t pd, uint16_t data) {
+	uint32_t word;
+
+	/* Prepare Word */
+	word = (pd << 16) | data;
+
+	/* Write word on MOSI */
+	spi_mosi_write(word);
+
+	/* Initiate SPI Xfer */
+	spi_control_write(24*SPI_LENGTH | SPI_START);
+
+	/* Wait SPI Xfer to be done */
+	while(spi_status_read() != SPI_DONE);
 }
 
 static void dac_test(void)
 {
-	int i;
 	while (1) {
-		dac_spi_xfer(65535);
+		Control_TCXO_DAC(0, 65535);
 		busy_wait(1000);
-		dac_spi_xfer(0);
+		Control_TCXO_DAC(0, 0);
 		busy_wait(1000);
 	}
 }
