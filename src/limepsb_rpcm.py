@@ -276,18 +276,20 @@ class BaseSoC(SoCCore):
             ),
         ]
 
-#        # FPGA_SYNC_OUT
-#        self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
-#
-#        # RPI_SYNC_IN.
-#        from litex.build.io import SDRTristate
-#        self.specials += SDRTristate(
-#            io  = rpi_sync_pads.i,
-#            i   = Open(),
-#            o   = gnss_pads.tpulse,
-#            oe  = ~((gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out == 0) | (gpsdocfg_IICFG_TPULSE_SEL_out == 0b10)),
-#            clk = ClockSignal("sys"),
-#        )
+        # Sync In / Out ----------------------------------------------------------------------------
+
+        # FPGA_SYNC_OUT.
+        self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
+
+        # RPI_SYNC_IN.
+        from litex.build.io import SDRTristate
+        self.specials += SDRTristate(
+            io  = rpi_sync_pads.i,
+            i   = Open(),
+            o   = gnss_pads.tpulse,
+            oe  = ~((gpsdocfg_IICFG_RPI_SYNC_IN_DIR_out == 0) | (gpsdocfg_IICFG_TPULSE_SEL_out == 0b10)),
+            clk = ClockSignal("sys"),
+        )
 
         # VCXO Tamer -------------------------------------------------------------------------------
 
@@ -295,7 +297,6 @@ class BaseSoC(SoCCore):
         self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x100))
 
         if with_vcxo_tamer:
-
             vctcxo_tamer_pps_1s_error    = Signal(32)
             vctcxo_tamer_pps_10s_error   = Signal(32)
             vctcxo_tamer_pps_100s_error  = Signal(32)
