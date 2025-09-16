@@ -250,25 +250,25 @@ class BaseSoC(SoCCore):
             o_pps_active = pps_active
         )
 
-        # DAC SPI Sharing Logic --------------------------------------------------------------------
+        # SPI0 (DAC) Sharing Logic -------------------------------------------------------------------
 
         fpga_spi0_pads = platform.request("fpga_spi0")
 
         self.comb += [
-            # Default to RPI control
-            fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
-            fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
-            fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
+            # SPI0 controlled from Rpi.
+            If(gpsdocfg_IICFG_EN_out == 0b0,
+                fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
+                fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
+            ),
 
-            # FPGA control when gpsdocfg_IICFG_EN_out is set.
-            If(gpsdocfg_IICFG_EN_out,
-                fpga_spi0_pads.sclk.eq(0),  # FIXME: Connect.
-                fpga_spi0_pads.mosi.eq(0),  # FIXME: Connect.
-                fpga_spi0_pads.dac_ss.eq(0) # FIXME: Connect.
-            )
+            # SPI0 controlled from CPU.
+            If(gpsdocfg_IICFG_EN_out == 0b1,
+                fpga_spi0_pads.sclk.eq(0),   # FIXME: Connect.
+                fpga_spi0_pads.mosi.eq(0),   # FIXME: Connect.
+                fpga_spi0_pads.dac_ss.eq(0), # FIXME: Connect.
+            ),
         ]
-
-        # FIXME: Handle: RPI_SPI1_MISO sharing.
 
 #        # FPGA_SYNC_OUT
 #        self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
@@ -285,8 +285,8 @@ class BaseSoC(SoCCore):
 
         # VCXO Tamer -------------------------------------------------------------------------------
 
-        self.vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
-        self.bus.add_slave("vcxo_tamer", self.vctcxo_tamer_bus, region=SoCRegion(size=0x100))
+        vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
+        self.bus.add_slave("vcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x100))
 
         vctcxo_tamer_pps_1s_error    = Signal(32)
         vctcxo_tamer_pps_10s_error   = Signal(32)
@@ -304,24 +304,24 @@ class BaseSoC(SoCCore):
             # Wishbone Interface (connected to dedicated bus)
             i_wb_clk_i           = ClockSignal("sys"),
             i_wb_rst_i           = ResetSignal("sys"),
-            i_wb_adr_i           = self.vctcxo_tamer_bus.adr,
-            i_wb_dat_i           = self.vctcxo_tamer_bus.dat_w,
-            o_wb_dat_o           = self.vctcxo_tamer_bus.dat_r,
-            i_wb_we_i            = self.vctcxo_tamer_bus.we,
-            i_wb_stb_i           = self.vctcxo_tamer_bus.stb,
-            o_wb_ack_o           = self.vctcxo_tamer_bus.ack,
-            i_wb_cyc_i           = self.vctcxo_tamer_bus.cyc,
+            i_wb_adr_i           = vctcxo_tamer_bus.adr,
+            i_wb_dat_i           = vctcxo_tamer_bus.dat_w,
+            o_wb_dat_o           = vctcxo_tamer_bus.dat_r,
+            i_wb_we_i            = vctcxo_tamer_bus.we,
+            i_wb_stb_i           = vctcxo_tamer_bus.stb,
+            o_wb_ack_o           = vctcxo_tamer_bus.ack,
+            i_wb_cyc_i           = vctcxo_tamer_bus.cyc,
 
             # Wishbone Interrupt
             o_wb_int_o           = vctcxo_tamer_wb_int,
 
             # Configuration inputs from gpsdocfg
-            i_PPS_1S_TARGET       = gpsdocfg_IICFG_1S_TARGET_out,
-            i_PPS_1S_ERROR_TOL    = Cat(Signal(16, reset=0), gpsdocfg_IICFG_1S_TOL_out),
-            i_PPS_10S_TARGET      = gpsdocfg_IICFG_10S_TARGET_out,
-            i_PPS_10S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_IICFG_10S_TOL_out),
-            i_PPS_100S_TARGET     = gpsdocfg_IICFG_100S_TARGET_out,
-            i_PPS_100S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_IICFG_100S_TOL_out),
+            i_PPS_1S_TARGET      = gpsdocfg_IICFG_1S_TARGET_out,
+            i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_IICFG_1S_TOL_out),
+            i_PPS_10S_TARGET     = gpsdocfg_IICFG_10S_TARGET_out,
+            i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_IICFG_10S_TOL_out),
+            i_PPS_100S_TARGET    = gpsdocfg_IICFG_100S_TARGET_out,
+            i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdocfg_IICFG_100S_TOL_out),
 
             # Status outputs
             o_pps_1s_error       = vctcxo_tamer_pps_1s_error,
@@ -331,6 +331,8 @@ class BaseSoC(SoCCore):
             o_state              = vctcxo_tamer_state,
             o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
         )
+
+        # VHDL -> Verilog Conversion ---------------------------------------------------------------
 
         # PPS Detector VHD2V Converter.
         # -----------------------------
@@ -389,7 +391,7 @@ class BaseSoC(SoCCore):
 def main():
     from litex.build.parser import LiteXArgumentParser
     parser = LiteXArgumentParser(platform=Platform, description="LiteX SoC on LimePSB RPCM Board.")
-    parser.add_argument("--sys-clk-freq", default=6e6,         help="System clock frequency (default: 10MHz)")
+    parser.add_argument("--sys-clk-freq", default=6e6, help="System clock frequency (default: 10MHz)")
     args = parser.parse_args()
 
     # SoC.
