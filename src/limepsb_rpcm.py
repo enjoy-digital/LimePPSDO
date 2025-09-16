@@ -149,6 +149,9 @@ class BaseSoC(SoCCore):
 
         # GPSDOCFG ---------------------------------------------------------------------------------
 
+        # Signals.
+        # --------
+
         gpsdocfg_PPS_1S_ERROR_in   = Signal(32, reset=0x12345678)
         gpsdocfg_PPS_10S_ERROR_in  = Signal(32, reset=0x9ABCDEF0)
         gpsdocfg_PPS_100S_ERROR_in = Signal(32, reset=0x55555555)
@@ -171,6 +174,8 @@ class BaseSoC(SoCCore):
 
         rpi_spi1_pads  = platform.request("rpi_spi1")
 
+        # Instance.
+        # ---------
         self.specials += Instance("gpsdocfg",
             # Address and location of this module
             i_maddress                  = 0, # Will be hard wired at the top level
@@ -210,10 +215,26 @@ class BaseSoC(SoCCore):
             o_IICFG_100S_TOL_out        = gpsdocfg_IICFG_100S_TOL_out
         )
 
+        # VHD2V Conversion.
+        # -----------------
+        self.vhd2v_converter_gpsdocfg = VHD2VConverter(self.platform,
+            top_entity     = "gpsdocfg",
+            build_dir      = os.path.abspath(os.path.dirname(__file__)),
+            work_package   = "work",
+            force_convert  = True,
+            add_instance   = False,
+            flatten_source = False,
+            params         = {}
+        )
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/revisions.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/gpsdocfg.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mcfg32wm_fsm.vhd")
+        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mem_package.vhd")
+        self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
+
         # TPULSE Selection -------------------------------------------------------------------------
 
         rpi_sync_pads  = platform.request("rpi_sync")
-
 
         tpulse_internal = Signal()
 
@@ -241,14 +262,32 @@ class BaseSoC(SoCCore):
 
         # PPS Detector -----------------------------------------------------------------------------
 
+        # Signals.
         pps_active = Signal()
 
+        # Instance.
         self.specials += Instance("pps_detector",
             i_clk        = ClockSignal("sys"),
             i_reset      = ResetSignal("sys"),
             i_pps        = tpulse_internal,
             o_pps_active = pps_active
         )
+
+        # VHD2V Conversion.
+        self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
+            top_entity     = "pps_detector",
+            build_dir      = os.path.abspath(os.path.dirname(__file__)),
+            work_package   = "work",
+            force_convert  = True,
+            add_instance   = False,
+            flatten_source = False,
+            params         = dict(
+                p_CLK_FREQ_HZ = 6000000,
+                p_TOLERANCE   = 5000000,
+            )
+        )
+        self.vhd2v_converter_pps_detector.add_source("hdl/pps_detector/pps_detector.vhd")
+        self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
 
         # SPI Master (AD5662 DAC) ------------------------------------------------------------------
 
@@ -297,6 +336,9 @@ class BaseSoC(SoCCore):
         self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x100))
 
         if with_vcxo_tamer:
+
+            # Signals.
+            # --------
             vctcxo_tamer_pps_1s_error    = Signal(32)
             vctcxo_tamer_pps_10s_error   = Signal(32)
             vctcxo_tamer_pps_100s_error  = Signal(32)
@@ -305,6 +347,8 @@ class BaseSoC(SoCCore):
             vctcxo_tamer_dac_tuned_val   = Signal(16)
             vctcxo_tamer_wb_int          = Signal()
 
+            # Instance.
+            # ---------
             self.specials += Instance("vctcxo_tamer",
                 # Physical Interface
                 i_tune_ref           = tpulse_internal,
@@ -341,60 +385,23 @@ class BaseSoC(SoCCore):
                 o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
             )
 
-        # VHDL -> Verilog Conversion ---------------------------------------------------------------
-
-        # PPS Detector VHD2V Converter.
-        # -----------------------------
-        self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
-            top_entity     = "pps_detector",
-            build_dir      = os.path.abspath(os.path.dirname(__file__)),
-            work_package   = "work",
-            force_convert  = True,
-            add_instance   = False,
-            flatten_source = False,
-            params         = dict(
-                p_CLK_FREQ_HZ = 6000000,
-                p_TOLERANCE   = 5000000,
+            # VHD2V Conversion.
+            # -----------------
+            self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
+                top_entity     = "vctcxo_tamer",
+                build_dir      = os.path.abspath(os.path.dirname(__file__)),
+                work_package   = "work",
+                force_convert  = True,
+                add_instance   = False,
+                flatten_source = False,
+                params         = {}
             )
-        )
-        self.vhd2v_converter_pps_detector.add_source("hdl/pps_detector/pps_detector.vhd")
-        self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
-
-        # GPSDOCFG VHD2V Converter.
-        # -------------------------
-        self.vhd2v_converter_gpsdocfg = VHD2VConverter(self.platform,
-            top_entity     = "gpsdocfg",
-            build_dir      = os.path.abspath(os.path.dirname(__file__)),
-            work_package   = "work",
-            force_convert  = True,
-            add_instance   = False,
-            flatten_source = False,
-            params         = {}
-        )
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/revisions.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/gpsdocfg.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mcfg32wm_fsm.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mem_package.vhd")
-        self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
-
-        # VCXO Tamer VHD2V Converter.
-        # ---------------------------
-        self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
-            top_entity     = "vctcxo_tamer",
-            build_dir      = os.path.abspath(os.path.dirname(__file__)),
-            work_package   = "work",
-            force_convert  = True,
-            add_instance   = False,
-            flatten_source = False,
-            params         = {}
-        )
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector_fixed.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/handshake.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
-
+            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector_fixed.vhd")
+            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/handshake.vhd")
+            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
+            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
+            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
+            self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
 
 # Build --------------------------------------------------------------------------------------------
 def main():
