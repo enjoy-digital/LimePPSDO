@@ -139,6 +139,7 @@ class BaseSoC(SoCCore):
         rpi_sync_pads      = platform.request("rpi_sync")
 
         # FPGA.
+        fpga_led_r         = platform.request("fpga_led_r")
         fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
         fpga_spi0_pads     = platform.request("fpga_spi0")
         fpga_sync_out_pads = platform.request("fpga_sync_out")
@@ -271,6 +272,10 @@ class BaseSoC(SoCCore):
             files          = ["hdl/pps_detector/pps_detector.vhd"]
         )
         self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
+
+        # Led --------------------------------------------------------------------------------------
+
+        self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & gpsdo_en))
 
         # VCTCXO Clk Selection ---------------------------------------------------------------------
 
