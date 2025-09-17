@@ -26,6 +26,7 @@ from litex.soc.integration.builder import *
 
 from litex.soc.integration.soc import SoCRegion
 from litex.soc.interconnect import wishbone
+from litex.soc.interconnect.csr import *
 
 from limepsb_rpcm_platform import Platform
 
@@ -122,6 +123,9 @@ class BaseSoC(SoCCore):
         gpsdo_accuracy        = Signal(4)
         gpsdo_state           = Signal(4)
 
+        # VCXO Tamer.
+        vctcxo_tamer_irq      = Signal()
+
         # Pads -------------------------------------------------------------------------------------
 
         # HW/BOM.
@@ -154,6 +158,27 @@ class BaseSoC(SoCCore):
             bom_version.eq(version_pads.bom),
             hw_version.eq(version_pads.hw),
         ]
+
+        # Mailbox (SoC <-> CPU Communication) ------------------------------------------------------
+
+        class Mailbox(LiteXModule):
+            def __init__(self):
+                self.gpsdo_en         = CSRStatus()
+                self.vctcxo_tamer_irq = CSRStatus()
+
+                # # #
+
+                self.comb += self.gpsdo_en.status.eq(gpsdo_en)
+
+                self.sync += [
+                    If(self.vctcxo_tamer_irq.re,
+                        self.vctcxo_tamer_irq.status.eq(vctcxo_tamer_irq)
+                    ).Else(
+                        self.vctcxo_tamer_irq.status.eq(vctcxo_tamer_irq | self.vctcxo_tamer_irq.status)
+                    )
+                ]
+
+        self.mailbox = Mailbox()
 
         # TDD Redirection --------------------------------------------------------------------------
 
@@ -325,10 +350,6 @@ class BaseSoC(SoCCore):
 
         # VCTCXO Tamer -----------------------------------------------------------------------------
 
-        # Signals.
-        # --------
-        vctcxo_tamer_wb_int         = Signal()
-
         # MMAP (Wishbone).
         # ----------------
         vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
@@ -351,7 +372,7 @@ class BaseSoC(SoCCore):
             i_wb_stb_i           = vctcxo_tamer_bus.stb,
             o_wb_ack_o           = vctcxo_tamer_bus.ack,
             i_wb_cyc_i           = vctcxo_tamer_bus.cyc,
-            o_wb_int_o           = vctcxo_tamer_wb_int,
+            o_wb_int_o           = vctcxo_tamer_irq,
 
             # Configuration Inputs.
             i_PPS_1S_TARGET      = gpsdo_1s_target,
