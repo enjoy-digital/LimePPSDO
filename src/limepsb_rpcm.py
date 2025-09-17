@@ -353,7 +353,7 @@ class BaseSoC(SoCCore):
         # MMAP (Wishbone).
         # ----------------
         vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
-        self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x100))
+        self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x1000))
 
         # Instance.
         # ---------
