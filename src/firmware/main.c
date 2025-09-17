@@ -83,7 +83,7 @@ int main(void)
 
 #ifdef DEBUG_PRINT
 	uart_init();
-	puts("\nLimePSB-RPCM GPSDO CPU Firmware\n");
+	puts("\nLimePSB-RPCM GPSDO Firmware\n");
 #endif
 	// Trim DAC constants
   	const uint16_t trimdac_min = 0x0000; // Decimal value = 0

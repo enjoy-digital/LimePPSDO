@@ -87,7 +87,7 @@ class BaseSoC(SoCCore):
         kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
 
-        SoCCore.__init__(self, platform, sys_clk_freq, ident="LiteX SoC on LimePSB RPCM Board", **kwargs)
+        SoCCore.__init__(self, platform, sys_clk_freq, ident="LimePSB-RPCM GPSDO SoC", **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
 
@@ -106,10 +106,12 @@ class BaseSoC(SoCCore):
 
         # Led --------------------------------------------------------------------------------------
 
-        self.leds = LedChaser(
-            pads         = platform.request_all("fpga_led_r"),
-            sys_clk_freq = sys_clk_freq
-        )
+        # FIXME: Remove?
+
+        #self.leds = LedChaser(
+        #    pads         = platform.request_all("fpga_led_r"),
+        #    sys_clk_freq = sys_clk_freq
+        #)
 
         # TDD Redirection --------------------------------------------------------------------------
 
@@ -150,25 +152,25 @@ class BaseSoC(SoCCore):
         # Signals.
         # --------
 
-        gpsdocfg_pps_1s_error_in   = Signal(32)
-        gpsdocfg_pps_10s_error_in  = Signal(32)
-        gpsdocfg_pps_100s_error_in = Signal(32)
-        gpsdocfg_dac_tuned_val_in  = Signal(16)
-        gpsdocfg_accuracy_in       = Signal(4)
-        gpsdocfg_state_in          = Signal(4)
-        gpsdocfg_tpulse_active_in  = Signal(reset=1) # FIXME: Connect.
+        pps_active  = Signal()
 
-        # Add signals for gpsdocfg outputs
-        gpsdocfg_iicfg_en_out              = Signal(reset=1) # FIXME: For test, remove.
-        gpsdocfg_iicfg_clk_sel_out         = Signal()
-        gpsdocfg_iicfg_tpulse_sel_out      = Signal(2)
-        gpsdocfg_iicfg_rpi_sync_in_dir_out = Signal()
-        gpsdocfg_iicfg_1s_target_out       = Signal(32)
-        gpsdocfg_iicfg_1s_tol_out          = Signal(16)
-        gpsdocfg_iicfg_10s_target_out      = Signal(32)
-        gpsdocfg_iicfg_10s_tol_out         = Signal(16)
-        gpsdocfg_iicfg_100s_target_out     = Signal(32)
-        gpsdocfg_iicfg_100s_tol_out        = Signal(16)
+        gpsdo_1s_error   = Signal(32)
+        gpsdo_10s_error  = Signal(32)
+        gpsdo_100s_error = Signal(32)
+        gpsdo_dac_tuned_val    = Signal(16)
+        gpsdo_accuracy         = Signal(4)
+        gpsdo_state            = Signal(4)
+
+        gpsdo_en              = Signal(reset=1) # FIXME: For test, remove.
+        gpsdo_clk_sel         = Signal()
+        gpsdo_tpulse_sel      = Signal(2)
+        gpsdo_rpi_sync_in_dir = Signal()
+        gpsdo_1s_target       = Signal(32)
+        gpsdo_1s_tol          = Signal(16)
+        gpsdo_10s_target      = Signal(32)
+        gpsdo_10s_tol         = Signal(16)
+        gpsdo_100s_target     = Signal(32)
+        gpsdo_100s_tol        = Signal(16)
 
         rpi_spi1_pads  = platform.request("rpi_spi1")
 
@@ -191,25 +193,25 @@ class BaseSoC(SoCCore):
             o_oen                       = Open(),
 
             # Inputs.
-            i_PPS_1S_ERROR_in           = gpsdocfg_pps_1s_error_in,
-            i_PPS_10S_ERROR_in          = gpsdocfg_pps_10s_error_in,
-            i_PPS_100S_ERROR_in         = gpsdocfg_pps_100s_error_in,
-            i_DAC_TUNED_VAL_in          = gpsdocfg_dac_tuned_val_in,
-            i_ACCURACY_in               = gpsdocfg_accuracy_in,
-            i_STATE_in                  = gpsdocfg_state_in,
-            i_TPULSE_ACTIVE_in          = gpsdocfg_tpulse_active_in,
+            i_PPS_1S_ERROR_in           = gpsdo_1s_error,
+            i_PPS_10S_ERROR_in          = gpsdo_10s_error,
+            i_PPS_100S_ERROR_in         = gpsdo_100s_error,
+            i_DAC_TUNED_VAL_in          = gpsdo_dac_tuned_val,
+            i_ACCURACY_in               = gpsdo_accuracy,
+            i_STATE_in                  = gpsdo_state,
+            i_TPULSE_ACTIVE_in          = pps_active,
 
             # Outputs.
-            #o_IICFG_EN_out              = gpsdocfg_iicfg_en_out, # FIXME: For test, remove.
-            o_IICFG_CLK_SEL_out         = gpsdocfg_iicfg_clk_sel_out,
-            o_IICFG_TPULSE_SEL_out      = gpsdocfg_iicfg_tpulse_sel_out,
-            o_IICFG_RPI_SYNC_IN_DIR_out = gpsdocfg_iicfg_rpi_sync_in_dir_out,
-            o_IICFG_1S_TARGET_out       = gpsdocfg_iicfg_1s_target_out,
-            o_IICFG_1S_TOL_out          = gpsdocfg_iicfg_1s_tol_out,
-            o_IICFG_10S_TARGET_out      = gpsdocfg_iicfg_10s_target_out,
-            o_IICFG_10S_TOL_out         = gpsdocfg_iicfg_10s_tol_out,
-            o_IICFG_100S_TARGET_out     = gpsdocfg_iicfg_100s_target_out,
-            o_IICFG_100S_TOL_out        = gpsdocfg_iicfg_100s_tol_out
+            #o_IICFG_EN_out              = gpsdo_en, # FIXME: For test, remove.
+            o_IICFG_CLK_SEL_out         = gpsdo_clk_sel,
+            o_IICFG_TPULSE_SEL_out      = gpsdo_tpulse_sel,
+            o_IICFG_RPI_SYNC_IN_DIR_out = gpsdo_rpi_sync_in_dir,
+            o_IICFG_1S_TARGET_out       = gpsdo_1s_target,
+            o_IICFG_1S_TOL_out          = gpsdo_1s_tol,
+            o_IICFG_10S_TARGET_out      = gpsdo_10s_target,
+            o_IICFG_10S_TOL_out         = gpsdo_10s_tol,
+            o_IICFG_100S_TARGET_out     = gpsdo_100s_target,
+            o_IICFG_100S_TOL_out        = gpsdo_100s_tol
         )
 
         # VHD2V Conversion.
@@ -233,7 +235,7 @@ class BaseSoC(SoCCore):
         rpi_sync_pads   = platform.request("rpi_sync")
         rpi_sync_pads_i = Signal()
 
-        self.comb += Case(gpsdocfg_iicfg_tpulse_sel_out, {
+        self.comb += Case(gpsdo_tpulse_sel, {
             0b01 : pps.eq(rpi_sync_pads.o),  # RPI_SYNC_OUT.
             0b10 : pps.eq(rpi_sync_pads_i),  # RPI_SYNC_IN.
             0b00 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
@@ -246,15 +248,12 @@ class BaseSoC(SoCCore):
 
         self.cd_vctcxo = ClockDomain()
 
-        self.comb += Case(gpsdocfg_iicfg_clk_sel_out, {
+        self.comb += Case(gpsdo_clk_sel, {
             0b0 : self.cd_vctcxo.clk.eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
             0b1 : self.cd_vctcxo.clk.eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
         })
 
         # PPS Detector -----------------------------------------------------------------------------
-
-        # Signals.
-        pps_active = Signal()
 
         # Instance.
         self.specials += Instance("pps_detector",
@@ -291,14 +290,14 @@ class BaseSoC(SoCCore):
 
         self.comb += [
             # SPI0 controlled from Rpi.
-            If(gpsdocfg_iicfg_en_out == 0b0,
+            If(gpsdo_en == 0b0,
                 fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
                 fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
             ),
 
             # SPI0 controlled from CPU.
-            If(gpsdocfg_iicfg_en_out == 0b1,
+            If(gpsdo_en == 0b1,
                 fpga_spi0_pads.sclk.eq(spi_pads.clk),
                 fpga_spi0_pads.mosi.eq(spi_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
@@ -316,7 +315,7 @@ class BaseSoC(SoCCore):
             io  = rpi_sync_pads.i,
             i   = rpi_sync_pads_i,
             o   = gnss_pads.tpulse,
-            oe  = ~((gpsdocfg_iicfg_rpi_sync_in_dir_out == 0) | (gpsdocfg_iicfg_tpulse_sel_out == 0b10)),
+            oe  = ~((gpsdo_rpi_sync_in_dir == 0) | (gpsdo_tpulse_sel == 0b10)),
             clk = ClockSignal("sys"),
         )
 
@@ -351,20 +350,20 @@ class BaseSoC(SoCCore):
             o_wb_int_o           = vctcxo_tamer_wb_int,
 
             # Configuration Inputs.
-            i_PPS_1S_TARGET      = gpsdocfg_iicfg_1s_target_out,
-            i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdocfg_iicfg_1s_tol_out),
-            i_PPS_10S_TARGET     = gpsdocfg_iicfg_10s_target_out,
-            i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdocfg_iicfg_10s_tol_out),
-            i_PPS_100S_TARGET    = gpsdocfg_iicfg_100s_target_out,
-            i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdocfg_iicfg_100s_tol_out),
+            i_PPS_1S_TARGET      = gpsdo_1s_target,
+            i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdo_1s_tol),
+            i_PPS_10S_TARGET     = gpsdo_10s_target,
+            i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdo_10s_tol),
+            i_PPS_100S_TARGET    = gpsdo_100s_target,
+            i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdo_100s_tol),
 
             # Status Output.
-            o_pps_1s_error       = gpsdocfg_pps_1s_error_in,
-            o_pps_10s_error      = gpsdocfg_pps_10s_error_in,
-            o_pps_100s_error     = gpsdocfg_pps_100s_error_in,
-            o_accuracy           = gpsdocfg_accuracy_in,
-            o_state              = gpsdocfg_state_in,
-            o_dac_tuned_val      = gpsdocfg_dac_tuned_val_in
+            o_pps_1s_error       = gpsdo_1s_error,
+            o_pps_10s_error      = gpsdo_10s_error,
+            o_pps_100s_error     = gpsdo_100s_error,
+            o_accuracy           = gpsdo_accuracy,
+            o_state              = gpsdo_state,
+            o_dac_tuned_val      = gpsdo_dac_tuned_val
         )
 
         # VHD2V Conversion.
