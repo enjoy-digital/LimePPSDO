@@ -230,7 +230,8 @@ class BaseSoC(SoCCore):
 
         # TPULSE Selection -------------------------------------------------------------------------
 
-        rpi_sync_pads  = platform.request("rpi_sync")
+        rpi_sync_pads   = platform.request("rpi_sync")
+        rpi_sync_pads_i = Signal()
 
         tpulse_internal = Signal()
 
@@ -239,7 +240,7 @@ class BaseSoC(SoCCore):
             If(gpsdocfg_iicfg_tpulse_sel_out == 0b01,
                 tpulse_internal.eq(rpi_sync_pads.o)  # RPI_SYNC_OUT
             ).Elif(gpsdocfg_iicfg_tpulse_sel_out == 0b10,
-                tpulse_internal.eq(rpi_sync_pads.i)  # RPI_SYNC_IN
+                tpulse_internal.eq(rpi_sync_pads_i)  # RPI_SYNC_IN
             ).Else(
                 tpulse_internal.eq(gnss_pads.tpulse)  # GNSS_TPULSE (default)
             ),
@@ -315,15 +316,15 @@ class BaseSoC(SoCCore):
         # FPGA_SYNC_OUT.
         self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
 
-#        # RPI_SYNC_IN.
-#        from litex.build.io import SDRTristate
-#        self.specials += SDRTristate(
-#            io  = rpi_sync_pads.i,
-#            i   = Open(),
-#            o   = gnss_pads.tpulse,
-#            oe  = ~((gpsdocfg_iicfg_rpi_sync_in_dir_out == 0) | (gpsdocfg_iicfg_tpulse_sel_out == 0b10)),
-#            clk = ClockSignal("sys"),
-#        )
+        # RPI_SYNC_IN.
+        from litex.build.io import SDRTristate
+        self.specials += SDRTristate(
+            io  = rpi_sync_pads.i,
+            i   = rpi_sync_pads_i,
+            o   = gnss_pads.tpulse,
+            oe  = ~((gpsdocfg_iicfg_rpi_sync_in_dir_out == 0) | (gpsdocfg_iicfg_tpulse_sel_out == 0b10)),
+            clk = ClockSignal("sys"),
+        )
 
         # VCTCXO Tamer -----------------------------------------------------------------------------
 
