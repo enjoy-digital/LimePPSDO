@@ -242,18 +242,10 @@ class BaseSoC(SoCCore):
             0b11 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
         })
 
-        # VCTCXO Clk Selection ---------------------------------------------------------------------
-
-        # FIXME: Use proper primitive for Clk Muxing?
-
-        self.comb += Case(gpsdo_clk_sel, {
-            0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
-            0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
-        })
-
-        # PPS Detector -----------------------------------------------------------------------------
+        # PPS Detection ----------------------------------------------------------------------------
 
         # Instance.
+        # ---------
         self.specials += Instance("pps_detector",
             # Clk/Rst.
             i_clk        = ClockSignal("sys"),
@@ -265,6 +257,7 @@ class BaseSoC(SoCCore):
         )
 
         # VHD2V Conversion.
+        # -----------------
         self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
             top_entity     = "pps_detector",
             params         = dict(
@@ -276,16 +269,25 @@ class BaseSoC(SoCCore):
         )
         self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
 
-        # SPI Master (AD5662 DAC) ------------------------------------------------------------------
+        # VCTCXO Clk Selection ---------------------------------------------------------------------
 
+        # FIXME: Use proper primitive for Clk Muxing?
+
+        self.comb += Case(gpsdo_clk_sel, {
+            0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
+            0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
+        })
+
+        # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
+
+        # SPI Master (AD5662 DAC).
+        # ------------------------
         spi_pads = Record([("clk", 1), ("cs_n", 1), ("mosi", 1), ("miso", 1)])
-
         self.add_spi_master(name="spi", pads=spi_pads, data_width=24, spi_clk_freq=1e6)
 
-        # SPI Sharing Logic ------------------------------------------------------------------------
-
+        # SPI Sharing Logic.
+        # ------------------
         fpga_spi0_pads = platform.request("fpga_spi0")
-
         self.comb += [
             # SPI0 controlled from Rpi.
             If(gpsdo_en == 0b0,
