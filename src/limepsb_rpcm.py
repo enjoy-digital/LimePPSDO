@@ -227,23 +227,19 @@ class BaseSoC(SoCCore):
         )
         self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
 
-        # TPULSE Selection -------------------------------------------------------------------------
+        # PPS Selection ----------------------------------------------------------------------------
+
+        pps = Signal()
 
         rpi_sync_pads   = platform.request("rpi_sync")
         rpi_sync_pads_i = Signal()
 
-        tpulse_internal = Signal()
-
-        self.comb += [
-            # TPULSE selection based on IICFG_TPULSE_SEL_out
-            If(gpsdocfg_iicfg_tpulse_sel_out == 0b01,
-                tpulse_internal.eq(rpi_sync_pads.o)  # RPI_SYNC_OUT
-            ).Elif(gpsdocfg_iicfg_tpulse_sel_out == 0b10,
-                tpulse_internal.eq(rpi_sync_pads_i)  # RPI_SYNC_IN
-            ).Else(
-                tpulse_internal.eq(gnss_pads.tpulse)  # GNSS_TPULSE (default)
-            ),
-        ]
+        self.comb += Case(gpsdocfg_iicfg_tpulse_sel_out, {
+            0b01 : pps.eq(rpi_sync_pads.o),  # RPI_SYNC_OUT.
+            0b10 : pps.eq(rpi_sync_pads_i),  # RPI_SYNC_IN.
+            0b00 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
+            0b11 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
+        })
 
         # VCTCXO Clk Selection ---------------------------------------------------------------------
 
@@ -268,7 +264,7 @@ class BaseSoC(SoCCore):
             i_reset      = ResetSignal("sys"),
 
             # PPS Input/Output.
-            i_pps        = tpulse_internal,
+            i_pps        = pps,
             o_pps_active = pps_active
         )
 
@@ -346,8 +342,8 @@ class BaseSoC(SoCCore):
         # ---------
         self.specials += Instance("vctcxo_tamer",
             # Clk/PPS Inputs.
-            i_tune_ref           = tpulse_internal,
             i_vctcxo_clock       = ClockSignal("vctcxo"),
+            i_tune_ref           = pps,
 
             # Wishbone Interface.
             i_wb_clk_i           = ClockSignal("sys"),
