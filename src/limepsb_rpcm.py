@@ -218,11 +218,13 @@ class BaseSoC(SoCCore):
         self.vhd2v_converter_gpsdocfg = VHD2VConverter(self.platform,
             top_entity     = "gpsdocfg",
             flatten_source = False,
+            files          = [
+                "hdl/spi/revisions.vhd",
+                "hdl/spi/gpsdocfg.vhd",
+                "hdl/spi/mcfg32wm_fsm.vhd",
+                "hdl/spi/mem_package.vhd",
+            ]
         )
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/revisions.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/gpsdocfg.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mcfg32wm_fsm.vhd")
-        self.vhd2v_converter_gpsdocfg.add_source("hdl/spi/mem_package.vhd")
         self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
 
         # TPULSE Selection -------------------------------------------------------------------------
@@ -273,13 +275,13 @@ class BaseSoC(SoCCore):
         # VHD2V Conversion.
         self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
             top_entity     = "pps_detector",
-            flatten_source = False,
             params         = dict(
                 p_CLK_FREQ_HZ = 6000000,
                 p_TOLERANCE   = 5000000,
-            )
+            ),
+            flatten_source = False,
+            files          = ["hdl/pps_detector/pps_detector.vhd"]
         )
-        self.vhd2v_converter_pps_detector.add_source("hdl/pps_detector/pps_detector.vhd")
         self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
 
         # SPI Master (AD5662 DAC) ------------------------------------------------------------------
@@ -381,13 +383,15 @@ class BaseSoC(SoCCore):
         self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
             top_entity     = "vctcxo_tamer",
             flatten_source = False,
+            files          = [
+                "hdl/vctcxo_tamer/edge_detector_fixed.vhd",
+                "hdl/vctcxo_tamer/handshake.vhd",
+                "hdl/vctcxo_tamer/pps_counter.vhd",
+                "hdl/vctcxo_tamer/reset_synchronizer.vhd",
+                "hdl/vctcxo_tamer/synchronizer.vhd",
+                "hdl/vctcxo_tamer/vctcxo_tamer.vhd",
+            ]
         )
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/edge_detector_fixed.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/handshake.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/pps_counter.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/reset_synchronizer.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/synchronizer.vhd")
-        self.vhd2v_converter_vctcxo_tamer.add_source("hdl/vctcxo_tamer/vctcxo_tamer.vhd")
 
 # Build --------------------------------------------------------------------------------------------
 def main():
