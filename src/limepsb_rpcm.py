@@ -17,6 +17,7 @@ from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.gen import *
 
+from litex.build.io import SDRTristate
 from litex.build.vhd2v_converter import *
 
 from litex.soc.cores.clock import *
@@ -40,6 +41,7 @@ class _CRG(LiteXModule):
         self.cd_por      = ClockDomain()
         self.cd_clk10    = ClockDomain()
         self.cd_clk30p72 = ClockDomain()
+        self.cd_vctcxo   = ClockDomain()
 
         # Power On Reset.
         # ---------------
@@ -93,6 +95,32 @@ class BaseSoC(SoCCore):
 
         self.crg = _CRG(platform, sys_clk_freq)
 
+        # Global Signals ---------------------------------------------------------------------------
+
+        # PPS.
+        pps                   = Signal()
+        pps_active            = Signal()
+
+        # GPSDO Config.
+        gpsdo_en              = Signal(reset=1) # FIXME: For test, remove.
+        gpsdo_clk_sel         = Signal()
+        gpsdo_tpulse_sel      = Signal(2)
+        gpsdo_rpi_sync_in_dir = Signal()
+        gpsdo_1s_target       = Signal(32)
+        gpsdo_1s_tol          = Signal(16)
+        gpsdo_10s_target      = Signal(32)
+        gpsdo_10s_tol         = Signal(16)
+        gpsdo_100s_target     = Signal(32)
+        gpsdo_100s_tol        = Signal(16)
+
+        # GPSDO Status.
+        gpsdo_1s_error        = Signal(32)
+        gpsdo_10s_error       = Signal(32)
+        gpsdo_100s_error      = Signal(32)
+        gpsdo_dac_tuned_val   = Signal(16)
+        gpsdo_accuracy        = Signal(4)
+        gpsdo_state           = Signal(4)
+
         # BOM/HW Version ---------------------------------------------------------------------------
 
         # Get BOM/HW Version from IOs.
@@ -119,7 +147,7 @@ class BaseSoC(SoCCore):
         fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
         self.comb += [
             fpga_rf_sw_tdd_pad.eq(pcie_uim_pad),
-            # On hw_version = 0b01, invert TDD signal.
+            # On HW Version = 0b01, invert TDD signal.
             If(hw_version == 0b01,
                 fpga_rf_sw_tdd_pad.eq(~pcie_uim_pad)
             )
@@ -139,9 +167,6 @@ class BaseSoC(SoCCore):
             # GNSS Power-up (Active low reset).
             gnss_pads.reset.eq(1),
 
-            # GNSS Time Pulse.
-            #platform.request("fpga_gpio", 1).eq(gnss_pads.tpulse),
-
             # GNSS UART (Connect to RPI UART0).
             rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
@@ -149,35 +174,12 @@ class BaseSoC(SoCCore):
 
         # GPSDOCFG ---------------------------------------------------------------------------------
 
-        # Signals.
-        # --------
-
-        pps_active  = Signal()
-
-        gpsdo_1s_error   = Signal(32)
-        gpsdo_10s_error  = Signal(32)
-        gpsdo_100s_error = Signal(32)
-        gpsdo_dac_tuned_val    = Signal(16)
-        gpsdo_accuracy         = Signal(4)
-        gpsdo_state            = Signal(4)
-
-        gpsdo_en              = Signal(reset=1) # FIXME: For test, remove.
-        gpsdo_clk_sel         = Signal()
-        gpsdo_tpulse_sel      = Signal(2)
-        gpsdo_rpi_sync_in_dir = Signal()
-        gpsdo_1s_target       = Signal(32)
-        gpsdo_1s_tol          = Signal(16)
-        gpsdo_10s_target      = Signal(32)
-        gpsdo_10s_tol         = Signal(16)
-        gpsdo_100s_target     = Signal(32)
-        gpsdo_100s_tol        = Signal(16)
-
         rpi_spi1_pads  = platform.request("rpi_spi1")
 
         # Instance.
         # ---------
         self.specials += Instance("gpsdocfg",
-            # Configuration.
+            # Config.
             i_maddress                  = 0,
             i_mimo_en                   = 1,
 
@@ -230,8 +232,6 @@ class BaseSoC(SoCCore):
 
         # PPS Selection ----------------------------------------------------------------------------
 
-        pps = Signal()
-
         rpi_sync_pads   = platform.request("rpi_sync")
         rpi_sync_pads_i = Signal()
 
@@ -246,11 +246,9 @@ class BaseSoC(SoCCore):
 
         # FIXME: Use proper primitive for Clk Muxing?
 
-        self.cd_vctcxo = ClockDomain()
-
         self.comb += Case(gpsdo_clk_sel, {
-            0b0 : self.cd_vctcxo.clk.eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
-            0b1 : self.cd_vctcxo.clk.eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
+            0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
+            0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
         })
 
         # PPS Detector -----------------------------------------------------------------------------
@@ -310,7 +308,6 @@ class BaseSoC(SoCCore):
         self.comb += platform.request("fpga_sync_out").eq(ClockSignal("clk10"))
 
         # RPI_SYNC_IN.
-        from litex.build.io import SDRTristate
         self.specials += SDRTristate(
             io  = rpi_sync_pads.i,
             i   = rpi_sync_pads_i,
