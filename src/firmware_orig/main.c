@@ -173,7 +173,6 @@ int main(void)
   neo430_uart_br_print("\n");
   #endif
 
-
   while (1)
   {
     //Get vctcxo tamer enable bit status

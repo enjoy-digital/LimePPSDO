@@ -76,7 +76,7 @@ class _CRG(LiteXModule):
 
 # BaseSoC ------------------------------------------------------------------------------------------
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=6e6, **kwargs):
+    def __init__(self, sys_clk_freq=6e6, firmware_path=None, **kwargs):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ class BaseSoC(SoCCore):
         kwargs["with_ctrl"]            = False
         kwargs["integrated_sram_size"] = 0x100
         kwargs["integrated_rom_size"]  = 0x2000
-        kwargs["integrated_rom_init"]  = "firmware/firmware.bin"
+        kwargs["integrated_rom_init"]  = firmware_path
 
         SoCCore.__init__(self, platform, sys_clk_freq, ident="LimePSB-RPCM GPSDO SoC", **kwargs)
 
@@ -104,7 +104,7 @@ class BaseSoC(SoCCore):
         rpi_sync_pads_i       = Signal()
 
         # GPSDO Config.
-        gpsdo_en              = Signal(reset=1) # FIXME: For test, remove.
+        gpsdo_en              = Signal()
         gpsdo_clk_sel         = Signal()
         gpsdo_tpulse_sel      = Signal(2)
         gpsdo_rpi_sync_in_dir = Signal()
@@ -406,7 +406,7 @@ class BaseSoC(SoCCore):
             ]
         )
 
-# Build --------------------------------------------------------------------------------------------
+# Build -------------------------------------------------------------------------------------------
 def main():
     from litex.build.parser import LiteXArgumentParser
     parser = LiteXArgumentParser(platform=Platform, description="LiteX SoC on LimePSB RPCM Board.")
@@ -414,20 +414,20 @@ def main():
     args = parser.parse_args()
 
     # SoC.
-    soc = BaseSoC(
-        sys_clk_freq = int(float(args.sys_clk_freq)),
-        **soc_core_argdict(args)
-    )
-
-    # Build.
-    builder = Builder(soc, **parser.builder_argdict)
-    if args.build:
-        builder.build(**parser.toolchain_argdict)
-
-    # Load.
-    if args.load:
-        prog = soc.platform.create_programmer()
-        prog.load_bitstream(os.path.join(builder.output_dir, "gateware", soc.build_name + ".bin"))
+    for run in range(2):
+        prepare = (run == 0)
+        build   = ((run == 1) and (args.build or args.load))
+        soc = BaseSoC(
+            sys_clk_freq  = int(float(args.sys_clk_freq)),
+            firmware_path = None if prepare else "firmware/firmware.bin",
+            **soc_core_argdict(args)
+        )
+        builder = Builder(soc, **parser.builder_argdict)
+        builder.build(run=build)
+        if prepare:
+            ret = os.system("cd firmware && make clean all")
+            if ret != 0:
+                raise RuntimeError("Firmware build failed")
 
 if __name__ == "__main__":
     main()
