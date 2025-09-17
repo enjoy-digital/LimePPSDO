@@ -60,8 +60,9 @@ class SimSoC(SoCCore):
         # SoCCore ----------------------------------------------------------------------------------
 
         SoCCore.__init__(self, platform, sys_clk_freq,
-            cpu_type      = None,
-            uart_name     = "sim",
+            cpu_type            = "vexriscv",
+            integrated_rom_size = 0x10_0000,
+            uart_name           = "sim",
         )
 
         # CRG --------------------------------------------------------------------------------------
@@ -96,7 +97,7 @@ class SimSoC(SoCCore):
         # MMAP (Wishbone).
         # ----------------
         vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
-        #self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(origin=0x2000_0000, size=0x100))
+        self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(origin=0x2000_0000, size=0x1000))
 
         # Instance.
         # ---------
@@ -151,59 +152,60 @@ class SimSoC(SoCCore):
 
         # VCTCXO Access Test -----------------------------------------------------------------------
 
-        self.fsm = fsm = FSM(reset_state="IDLE")
+        if 0:
+            self.fsm = fsm = FSM(reset_state="IDLE")
 
-        readback_value_lsb = Signal(8)
-        readback_value_msb = Signal(8)
+            readback_value_lsb = Signal(8)
+            readback_value_msb = Signal(8)
 
-        fsm.act("IDLE",
-            NextState("WRITE-TEST-0")
-        )
-        fsm.act("WRITE-TEST-0",
-            vctcxo_tamer_bus.cyc.eq(1),
-            vctcxo_tamer_bus.stb.eq(1),
-            vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x20),
-            vctcxo_tamer_bus.we.eq(1),
-            vctcxo_tamer_bus.dat_w.eq(0x34),
-            If(vctcxo_tamer_bus.ack,
-                NextState("WRITE-TEST-1")
+            fsm.act("IDLE",
+                NextState("WRITE-TEST-0")
             )
-        )
-        fsm.act("WRITE-TEST-1",
-            vctcxo_tamer_bus.cyc.eq(1),
-            vctcxo_tamer_bus.stb.eq(1),
-            vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x21),
-            vctcxo_tamer_bus.we.eq(1),
-            vctcxo_tamer_bus.dat_w.eq(0x12),
-            If(vctcxo_tamer_bus.ack,
-                NextState("READ-TEST-0")
+            fsm.act("WRITE-TEST-0",
+                vctcxo_tamer_bus.cyc.eq(1),
+                vctcxo_tamer_bus.stb.eq(1),
+                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x20),
+                vctcxo_tamer_bus.we.eq(1),
+                vctcxo_tamer_bus.dat_w.eq(0x34),
+                If(vctcxo_tamer_bus.ack,
+                    NextState("WRITE-TEST-1")
+                )
             )
-        )
-        fsm.act("READ-TEST-0",
-            vctcxo_tamer_bus.cyc.eq(1),
-            vctcxo_tamer_bus.stb.eq(1),
-            vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x20),
-            vctcxo_tamer_bus.we.eq(0),
-            If(vctcxo_tamer_bus.ack,
-                NextValue(readback_value_lsb, vctcxo_tamer_bus.dat_r),
-                NextState("READ-TEST-1")
+            fsm.act("WRITE-TEST-1",
+                vctcxo_tamer_bus.cyc.eq(1),
+                vctcxo_tamer_bus.stb.eq(1),
+                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x21),
+                vctcxo_tamer_bus.we.eq(1),
+                vctcxo_tamer_bus.dat_w.eq(0x12),
+                If(vctcxo_tamer_bus.ack,
+                    NextState("READ-TEST-0")
+                )
             )
-        )
-        fsm.act("READ-TEST-1",
-            vctcxo_tamer_bus.cyc.eq(1),
-            vctcxo_tamer_bus.stb.eq(1),
-            vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x21),
-            vctcxo_tamer_bus.we.eq(0),
-            If(vctcxo_tamer_bus.ack,
-                NextValue(readback_value_msb, vctcxo_tamer_bus.dat_r),
-                NextState("IDLE")
+            fsm.act("READ-TEST-0",
+                vctcxo_tamer_bus.cyc.eq(1),
+                vctcxo_tamer_bus.stb.eq(1),
+                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x20),
+                vctcxo_tamer_bus.we.eq(0),
+                If(vctcxo_tamer_bus.ack,
+                    NextValue(readback_value_lsb, vctcxo_tamer_bus.dat_r),
+                    NextState("READ-TEST-1")
+                )
             )
-        )
+            fsm.act("READ-TEST-1",
+                vctcxo_tamer_bus.cyc.eq(1),
+                vctcxo_tamer_bus.stb.eq(1),
+                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x21),
+                vctcxo_tamer_bus.we.eq(0),
+                If(vctcxo_tamer_bus.ack,
+                    NextValue(readback_value_msb, vctcxo_tamer_bus.dat_r),
+                    NextState("IDLE")
+                )
+            )
 
-        # Sim Finish -------------------------------------------------------------------------------
-        cycles = Signal(32)
-        self.sync += cycles.eq(cycles + 1)
-        self.sync += If(cycles == 10000, Finish())
+#        # Sim Finish -------------------------------------------------------------------------------
+#        cycles = Signal(32)
+#        self.sync += cycles.eq(cycles + 1)
+#        self.sync += If(cycles == 10000, Finish())
 
 
 # Build --------------------------------------------------------------------------------------------
