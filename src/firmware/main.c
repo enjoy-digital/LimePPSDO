@@ -119,11 +119,7 @@ int main(void)
   {
     //Get vctcxo tamer enable bit status
     vctcxo_tamer_en_old = vctcxo_tamer_en;
-#if 0
-    vctcxo_tamer_en = (uint8_t)(GPIO_INPUT & 0x0001);
-#else
-    vctcxo_tamer_en = 1; /* FIXME: Replace with CSR and input */
-#endif
+    vctcxo_tamer_en = mailbox_gpsdo_en_read();
 
     // Enable or disable VCTCXO tamer module depending on enable signal
     if (vctcxo_tamer_en_old != vctcxo_tamer_en){
