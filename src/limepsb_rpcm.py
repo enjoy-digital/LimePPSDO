@@ -34,10 +34,12 @@ from limepsb_rpcm_platform import Platform
 
 class _CRG(LiteXModule):
     def __init__(self, platform, sys_clk_freq):
+        assert sys_clk_freq in [6e6, 12e6, 24e6, 48e6]
         self.rst         = Signal()
         self.cd_sys      = ClockDomain()
         self.cd_por      = ClockDomain()
-        assert sys_clk_freq in [6e6, 12e6, 24e6, 48e6]
+        self.cd_clk10    = ClockDomain()
+        self.cd_clk30p72 = ClockDomain()
 
         # Power On Reset.
         # ---------------
@@ -47,8 +49,8 @@ class _CRG(LiteXModule):
         self.comb += por_done.eq(por_count == 0)
         self.sync.por += If(~por_done, por_count.eq(por_count - 1))
 
-        # Internal High Frequency Oscillator.
-        # -----------------------------------
+        # Sys Clk Domain.
+        # ---------------
         clk_hf_div = {
              6e6 : "0b11",
             12e6 : "0b10",
@@ -61,11 +63,15 @@ class _CRG(LiteXModule):
             i_CLKHFPU   = 0b1,
             o_CLKHF     = self.cd_sys.clk,
         )
-
-        # Sys Clk Domain.
-        # ---------------
         self.specials += AsyncResetSynchronizer(self.cd_sys, ~por_done)
         platform.add_period_constraint(self.cd_sys.clk, 1e9 / sys_clk_freq)
+
+        # RF 10MHz/30.72MHz Clk Domains.
+        # ------------------------------
+        self.comb += [
+            self.cd_clk10.clk.eq(    platform.request("lmk10_clk_out0")),
+            self.cd_clk30p72.clk.eq( platform.request("lmkrf_clk_out4")),
+        ]
 
 # BaseSoC ------------------------------------------------------------------------------------------
 class BaseSoC(SoCCore):
@@ -137,15 +143,6 @@ class BaseSoC(SoCCore):
             # GNSS UART (Connect to RPI UART0).
             rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
-        ]
-
-        # Clocks -----------------------------------------------------------------------------------
-
-        lmk10_clk_out0 = Signal()
-        lmkrf_clk_out4 = Signal()
-        self.comb += [
-           lmk10_clk_out0.eq(platform.request("lmk10_clk_out0")),
-           lmkrf_clk_out4.eq(platform.request("lmkrf_clk_out4")),
         ]
 
         # GPSDOCFG ---------------------------------------------------------------------------------
@@ -251,9 +248,9 @@ class BaseSoC(SoCCore):
         vctcxo_clk = Signal()
         self.comb += [
             If(gpsdocfg_iicfg_clk_sel_out == 1,
-                vctcxo_clk.eq(lmk10_clk_out0)  # LMK10_CLK_OUT0
+                vctcxo_clk.eq(ClockSignal("clk10"))
             ).Else(
-                vctcxo_clk.eq(lmkrf_clk_out4)  # LMKRF_CLK_OUT4 (default)
+                vctcxo_clk.eq(ClockSignal("clk30p72"))
             )
         ]
 
@@ -314,7 +311,7 @@ class BaseSoC(SoCCore):
         # Sync In / Out ----------------------------------------------------------------------------
 
         # FPGA_SYNC_OUT.
-        self.comb += platform.request("fpga_sync_out").eq(lmk10_clk_out0)
+        self.comb += platform.request("fpga_sync_out").eq(ClockSignal("clk10"))
 
         # RPI_SYNC_IN.
         from litex.build.io import SDRTristate
