@@ -279,8 +279,6 @@ class BaseSoC(SoCCore):
 
         # VCTCXO Clk Selection ---------------------------------------------------------------------
 
-        # FIXME: Use proper primitive for Clk Muxing?
-
         self.comb += Case(gpsdo_clk_sel, {
             0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
             0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
