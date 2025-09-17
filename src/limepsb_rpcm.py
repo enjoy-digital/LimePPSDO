@@ -150,13 +150,13 @@ class BaseSoC(SoCCore):
         # Signals.
         # --------
 
-        gpsdocfg_pps_1s_error_in   = Signal(32, reset=0x12345678)
-        gpsdocfg_pps_10s_error_in  = Signal(32, reset=0x9abcdef0)
-        gpsdocfg_pps_100s_error_in = Signal(32, reset=0x55555555)
-        gpsdocfg_dac_tuned_val_in  = Signal(16, reset=0x1234)
-        gpsdocfg_accuracy_in       = Signal(4,  reset=0b0101)
-        gpsdocfg_state_in          = Signal(4,  reset=0b1010)
-        gpsdocfg_tpulse_active_in  = Signal(reset=1)
+        gpsdocfg_pps_1s_error_in   = Signal(32)
+        gpsdocfg_pps_10s_error_in  = Signal(32)
+        gpsdocfg_pps_100s_error_in = Signal(32)
+        gpsdocfg_dac_tuned_val_in  = Signal(16)
+        gpsdocfg_accuracy_in       = Signal(4)
+        gpsdocfg_state_in          = Signal(4)
+        gpsdocfg_tpulse_active_in  = Signal(reset=1) # FIXME: Connect.
 
         # Add signals for gpsdocfg outputs
         gpsdocfg_iicfg_en_out              = Signal(reset=1) # FIXME: For test, remove.
@@ -175,23 +175,22 @@ class BaseSoC(SoCCore):
         # Instance.
         # ---------
         self.specials += Instance("gpsdocfg",
-            # Address and location of this module
-            i_maddress                  = 0, # Will be hard wired at the top level
-            i_mimo_en                   = 1, # MIMO enable, from TOP SPI (always 1)
+            # Configuration.
+            i_maddress                  = 0,
+            i_mimo_en                   = 1,
 
-            # Serial port IOs
+            # SPI.
             i_sdin                      = rpi_spi1_pads.mosi,
             i_sclk                      = rpi_spi1_pads.sclk,
             i_sen                       = rpi_spi1_pads.ss1,
             o_sdout                     = rpi_spi1_pads.miso,
 
-            # Signals coming from the pins or top level serial interface
+            # Rst/Ctrl.
             i_lreset                    = ResetSignal("sys"),
             i_mreset                    = ResetSignal("sys"),
+            o_oen                       = Open(),
 
-            o_oen                       = Signal(),  # Not connected
-
-            # Inputs (formerly in t_TO_GPSDOCFG)
+            # Inputs.
             i_PPS_1S_ERROR_in           = gpsdocfg_pps_1s_error_in,
             i_PPS_10S_ERROR_in          = gpsdocfg_pps_10s_error_in,
             i_PPS_100S_ERROR_in         = gpsdocfg_pps_100s_error_in,
@@ -200,7 +199,7 @@ class BaseSoC(SoCCore):
             i_STATE_in                  = gpsdocfg_state_in,
             i_TPULSE_ACTIVE_in          = gpsdocfg_tpulse_active_in,
 
-            # Outputs (formerly in t_FROM_GPSDOCFG)
+            # Outputs.
             #o_IICFG_EN_out              = gpsdocfg_iicfg_en_out, # FIXME: For test, remove.
             o_IICFG_CLK_SEL_out         = gpsdocfg_iicfg_clk_sel_out,
             o_IICFG_TPULSE_SEL_out      = gpsdocfg_iicfg_tpulse_sel_out,
@@ -325,12 +324,6 @@ class BaseSoC(SoCCore):
 
         # Signals.
         # --------
-        vctcxo_tamer_pps_1s_error   = Signal(32)
-        vctcxo_tamer_pps_10s_error  = Signal(32)
-        vctcxo_tamer_pps_100s_error = Signal(32)
-        vctcxo_tamer_accuracy       = Signal(4)
-        vctcxo_tamer_state          = Signal(4)
-        vctcxo_tamer_dac_tuned_val  = Signal(16)
         vctcxo_tamer_wb_int         = Signal()
 
         # MMAP (Wishbone).
@@ -366,12 +359,12 @@ class BaseSoC(SoCCore):
             i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdocfg_iicfg_100s_tol_out),
 
             # Status Output.
-            o_pps_1s_error       = vctcxo_tamer_pps_1s_error,
-            o_pps_10s_error      = vctcxo_tamer_pps_10s_error,
-            o_pps_100s_error     = vctcxo_tamer_pps_100s_error,
-            o_accuracy           = vctcxo_tamer_accuracy,
-            o_state              = vctcxo_tamer_state,
-            o_dac_tuned_val      = vctcxo_tamer_dac_tuned_val
+            o_pps_1s_error       = gpsdocfg_pps_1s_error_in,
+            o_pps_10s_error      = gpsdocfg_pps_10s_error_in,
+            o_pps_100s_error     = gpsdocfg_pps_100s_error_in,
+            o_accuracy           = gpsdocfg_accuracy_in,
+            o_state              = gpsdocfg_state_in,
+            o_dac_tuned_val      = gpsdocfg_dac_tuned_val_in
         )
 
         # VHD2V Conversion.
