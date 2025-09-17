@@ -45,7 +45,7 @@ void vctcxo_tamer_enable_isr(bool enable) {
     return;
 }
 
-void vctcxo_tamer_clear_isr() {
+void vctcxo_tamer_clear_isr(void) {
     vctcxo_tamer_write(VT_CTRL_ADDR, vctcxo_tamer_ctrl_reg | VT_CTRL_IRQ_CLR);
     return;
 }
@@ -163,14 +163,14 @@ void vctcxo_tamer_isr(void *context) {
 }
 
 
-void vctcxo_tamer_init(){
+void vctcxo_tamer_init(void){
     /* Default VCTCXO Tamer and its interrupts to be disabled. */
 	vctcxo_tamer_write(VT_STATE_ADDR, 0x00);
 	/* Write status to to state register*/
     vctcxo_tamer_set_tune_mode(VCTCXO_TAMER_1_PPS);
 }
 
-void vctcxo_tamer_dis(){
+void vctcxo_tamer_dis(void){
     /* Default VCTCXO Tamer and its interrupts to be disabled. */
     vctcxo_tamer_set_tune_mode(VCTCXO_TAMER_DISABLED);
 

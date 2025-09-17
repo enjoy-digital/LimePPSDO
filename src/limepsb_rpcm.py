@@ -171,7 +171,7 @@ class BaseSoC(SoCCore):
                 self.comb += self.gpsdo_en.status.eq(gpsdo_en)
 
                 self.sync += [
-                    If(self.vctcxo_tamer_irq.re,
+                    If(self.vctcxo_tamer_irq.we,
                         self.vctcxo_tamer_irq.status.eq(vctcxo_tamer_irq)
                     ).Else(
                         self.vctcxo_tamer_irq.status.eq(vctcxo_tamer_irq | self.vctcxo_tamer_irq.status)

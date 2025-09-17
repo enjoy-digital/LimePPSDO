@@ -76,11 +76,6 @@ static void Control_TCXO_DAC(uint8_t pd, uint16_t data) {
 /*-----------------------------------------------------------------------*/
 int main(void)
 {
-#ifdef CONFIG_CPU_HAS_INTERRUPT
-	irq_setmask(0);
-	irq_setie(1);
-#endif
-
 #ifdef DEBUG_PRINT
 	uart_init();
 	puts("\nLimePSB-RPCM GPSDO Firmware\n");
@@ -120,6 +115,10 @@ int main(void)
     //Get vctcxo tamer enable bit status
     vctcxo_tamer_en_old = vctcxo_tamer_en;
     vctcxo_tamer_en = mailbox_gpsdo_en_read();
+
+    // Get vctcxo irq
+    if (mailbox_vctcxo_tamer_irq_read())
+        vctcxo_tamer_isr(&vctcxo_tamer_pkt);
 
     // Enable or disable VCTCXO tamer module depending on enable signal
     if (vctcxo_tamer_en_old != vctcxo_tamer_en){

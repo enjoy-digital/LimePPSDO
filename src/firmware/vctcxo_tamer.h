@@ -93,7 +93,7 @@ void vctcxo_tamer_reset_counters(bool reset) ;
 
 void vctcxo_tamer_enable_isr(bool enable) ;
 
-void vctcxo_tamer_clear_isr() ;
+void vctcxo_tamer_clear_isr(void);
 
 void vctcxo_tamer_set_tune_mode(vctcxo_tamer_mode mode) ;
 
@@ -103,8 +103,8 @@ void vctcxo_trim_dac_write(uint8_t cmd, uint16_t val);
 
 void vctcxo_tamer_isr(void *context) ;
 
-void vctcxo_tamer_init();
+void vctcxo_tamer_init(void);
 
-void vctcxo_tamer_dis();
+void vctcxo_tamer_dis(void);
 
 #endif /* VCTCXO_TAMER_H_ */
