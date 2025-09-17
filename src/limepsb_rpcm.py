@@ -245,16 +245,16 @@ class BaseSoC(SoCCore):
             ),
         ]
 
-        # Clock Selection --------------------------------------------------------------------------
+        # VCTCXO Clk Selection ---------------------------------------------------------------------
 
-        vctcxo_clk = Signal()
-        self.comb += [
-            If(gpsdocfg_iicfg_clk_sel_out == 1,
-                vctcxo_clk.eq(ClockSignal("clk10"))
-            ).Else(
-                vctcxo_clk.eq(ClockSignal("clk30p72"))
-            )
-        ]
+        # FIXME: Use proper primitive for Clk Muxing?
+
+        self.cd_vctcxo = ClockDomain()
+
+        self.comb += Case(gpsdocfg_iicfg_clk_sel_out, {
+            0b0 : self.cd_vctcxo.clk.eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
+            0b1 : self.cd_vctcxo.clk.eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
+        })
 
         # PPS Detector -----------------------------------------------------------------------------
 
@@ -347,7 +347,7 @@ class BaseSoC(SoCCore):
         self.specials += Instance("vctcxo_tamer",
             # Clk/PPS Inputs.
             i_tune_ref           = tpulse_internal,
-            i_vctcxo_clock       = vctcxo_clk,
+            i_vctcxo_clock       = ClockSignal("vctcxo"),
 
             # Wishbone Interface.
             i_wb_clk_i           = ClockSignal("sys"),
