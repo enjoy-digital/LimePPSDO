@@ -1,9 +1,9 @@
 -- ----------------------------------------------------------------------------	
--- FILE:	pps_detector.vhd
--- DESCRIPTION:	Detects if pps is active during specified timeout period
--- DATE:	Aug 20, 2001
--- AUTHOR(s):	Lime Microsystems
--- REVISIONS:
+-- FILE        :	pps_detector.vhd
+-- DESCRIPTION :	Detects if pps is active during specified timeout period
+-- DATE        :	Aug 20, 2001
+-- AUTHOR(s)   :	Lime Microsystems
+-- REVISIONS   :
 -- ----------------------------------------------------------------------------	
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
