@@ -27,8 +27,6 @@ from litex.soc.integration.builder import *
 from litex.soc.integration.soc import SoCRegion
 from litex.soc.interconnect import wishbone
 
-from litex.soc.cores.led import LedChaser
-
 from limepsb_rpcm_platform import Platform
 
 # CRG ----------------------------------------------------------------------------------------------
@@ -95,11 +93,14 @@ class BaseSoC(SoCCore):
 
         self.crg = _CRG(platform, sys_clk_freq)
 
-        # Global Signals ---------------------------------------------------------------------------
+        # Signals ----------------------------------------------------------------------------------
 
         # PPS.
         pps                   = Signal()
         pps_active            = Signal()
+
+        # RPi.
+        rpi_sync_pads_i       = Signal()
 
         # GPSDO Config.
         gpsdo_en              = Signal(reset=1) # FIXME: For test, remove.
@@ -121,30 +122,40 @@ class BaseSoC(SoCCore):
         gpsdo_accuracy        = Signal(4)
         gpsdo_state           = Signal(4)
 
+        # Pads -------------------------------------------------------------------------------------
+
+        # HW/BOM.
+        version_pads       = platform.request("version")
+
+        # PCIe.
+        pcie_uim_pad       = platform.request("pcie_uim")
+
+        # GNSS.
+        gnss_pads          = platform.request("gnss")
+
+        # Rpi.
+        rpi_uart0_pads     = platform.request("rpi_uart0")
+        rpi_spi1_pads      = platform.request("rpi_spi1")
+        rpi_sync_pads      = platform.request("rpi_sync")
+
+        # FPGA.
+        fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
+        fpga_spi0_pads     = platform.request("fpga_spi0")
+        fpga_sync_out_pads = platform.request("fpga_sync_out")
+
+
         # BOM/HW Version ---------------------------------------------------------------------------
 
         # Get BOM/HW Version from IOs.
         bom_version  = Signal(3)
         hw_version   = Signal(2)
-        version_pads = platform.request("version")
         self.comb += [
             bom_version.eq(version_pads.bom),
             hw_version.eq(version_pads.hw),
         ]
 
-        # Led --------------------------------------------------------------------------------------
-
-        # FIXME: Remove?
-
-        #self.leds = LedChaser(
-        #    pads         = platform.request_all("fpga_led_r"),
-        #    sys_clk_freq = sys_clk_freq
-        #)
-
         # TDD Redirection --------------------------------------------------------------------------
 
-        pcie_uim_pad       = platform.request("pcie_uim")
-        fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
         self.comb += [
             fpga_rf_sw_tdd_pad.eq(pcie_uim_pad),
             # On HW Version = 0b01, invert TDD signal.
@@ -154,9 +165,6 @@ class BaseSoC(SoCCore):
         ]
 
         # GNSS -------------------------------------------------------------------------------------
-
-        gnss_pads      = platform.request("gnss")
-        rpi_uart0_pads = platform.request("rpi_uart0")
 
         self.comb += [
             # GNSS Unused IOs.
@@ -173,8 +181,6 @@ class BaseSoC(SoCCore):
         ]
 
         # GPSDOCFG ---------------------------------------------------------------------------------
-
-        rpi_spi1_pads  = platform.request("rpi_spi1")
 
         # Instance.
         # ---------
@@ -204,7 +210,7 @@ class BaseSoC(SoCCore):
             i_TPULSE_ACTIVE_in          = pps_active,
 
             # Outputs.
-            #o_IICFG_EN_out              = gpsdo_en, # FIXME: For test, remove.
+            o_IICFG_EN_out              = gpsdo_en,
             o_IICFG_CLK_SEL_out         = gpsdo_clk_sel,
             o_IICFG_TPULSE_SEL_out      = gpsdo_tpulse_sel,
             o_IICFG_RPI_SYNC_IN_DIR_out = gpsdo_rpi_sync_in_dir,
@@ -231,9 +237,6 @@ class BaseSoC(SoCCore):
         self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
 
         # PPS Selection ----------------------------------------------------------------------------
-
-        rpi_sync_pads   = platform.request("rpi_sync")
-        rpi_sync_pads_i = Signal()
 
         self.comb += Case(gpsdo_tpulse_sel, {
             0b01 : pps.eq(rpi_sync_pads.o),  # RPI_SYNC_OUT.
@@ -287,7 +290,6 @@ class BaseSoC(SoCCore):
 
         # SPI Sharing Logic.
         # ------------------
-        fpga_spi0_pads = platform.request("fpga_spi0")
         self.comb += [
             # SPI0 controlled from Rpi.
             If(gpsdo_en == 0b0,
@@ -307,7 +309,7 @@ class BaseSoC(SoCCore):
         # Sync In / Out ----------------------------------------------------------------------------
 
         # FPGA_SYNC_OUT.
-        self.comb += platform.request("fpga_sync_out").eq(ClockSignal("clk10"))
+        self.comb += fpga_sync_out_pads.eq(ClockSignal("clk10"))
 
         # RPI_SYNC_IN.
         self.specials += SDRTristate(
