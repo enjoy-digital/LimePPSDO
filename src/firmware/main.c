@@ -12,7 +12,6 @@
 #include <string.h>
 #include <math.h>
 
-#include <irq.h>
 #include <libbase/uart.h>
 #include <libbase/console.h>
 

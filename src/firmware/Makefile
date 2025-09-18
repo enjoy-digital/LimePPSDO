@@ -3,7 +3,7 @@ BUILD_DIR?=../build/limepsb_rpcm_platform/
 include $(BUILD_DIR)/software/include/generated/variables.mak
 include $(SOC_DIRECTORY)/software/common.mak
 
-OBJECTS = isr.o vctcxo_tamer.o main.o crt0.o
+OBJECTS = vctcxo_tamer.o main.o crt0.o
 
 all: firmware.bin
 
