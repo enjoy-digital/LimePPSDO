@@ -117,8 +117,10 @@ int main(void)
     vctcxo_tamer_en = mailbox_gpsdo_en_read();
 
     // Get vctcxo irq
-    if (mailbox_vctcxo_tamer_irq_read())
+    if (mailbox_vctcxo_tamer_irq_read()) {
         vctcxo_tamer_isr(&vctcxo_tamer_pkt);
+        mailbox_vctcxo_tamer_irq_read();
+    }
 
     // Enable or disable VCTCXO tamer module depending on enable signal
     if (vctcxo_tamer_en_old != vctcxo_tamer_en){
