@@ -26,11 +26,7 @@
 /* Constants                                                             */
 /*-----------------------------------------------------------------------*/
 
-#define DEBUG_PRINT
-
-#define SPI_START   (1 << 0)
-#define SPI_DONE    (1 << 0)
-#define SPI_LENGTH  (1 << 8)
+#define VCTCXO_DEBUG
 
 #define VCTCXO_DEFAULT_DAC_VALUE 0x77FA
 
@@ -43,6 +39,10 @@ struct vctcxo_tamer_pkt_buf vctcxo_tamer_pkt;
 /*-----------------------------------------------------------------------*/
 /* Helpers                                                               */
 /*-----------------------------------------------------------------------*/
+
+#define SPI_START   (1 << 0)
+#define SPI_DONE    (1 << 0)
+#define SPI_LENGTH  (1 << 8)
 
 /* Sets the VCTCXO DAC value via SPI.
  *
@@ -89,7 +89,7 @@ static void adjust_trim_dac(int32_t error, float slope, int scale) {
 /*-----------------------------------------------------------------------*/
 int main(void)
 {
-#ifdef DEBUG_PRINT
+#ifdef VCTCXO_DEBUG
     uart_init();
     puts("\nLimePSB-RPCM GPSDO Firmware\n");
 #endif
@@ -161,7 +161,7 @@ int main(void)
             /* COARSE TUNE MIN State */
             /* --------------------- */
             case COARSE_TUNE_MIN:
-#ifdef DEBUG_PRINT
+#ifdef VCTCXO_DEBUG
                 puts("\nCOARSE_TUNE_MIN\n");
 #endif
                 /* Set trim DAC to minimum value. */
@@ -177,7 +177,7 @@ int main(void)
             /* COARSE TUNE MAX State   */
             /* ----------------------- */
             case COARSE_TUNE_MAX:
-#ifdef DEBUG_PRINT
+#ifdef VCTCXO_DEBUG
                 puts("\nCOARSE_TUNE_MAX\n");
 #endif
                 /* We have the error from the minimum DAC setting, store it as
@@ -198,7 +198,7 @@ int main(void)
             /* ---------------------- */
 
             case COARSE_TUNE_DONE:
-#ifdef DEBUG_PRINT
+#ifdef VCTCXO_DEBUG
                 puts("\nCOARSE_TUNE_DONE\n");
 #endif
                 /* Write status to state register. */
@@ -238,7 +238,7 @@ int main(void)
             /* FINE TUNE State */
             /* --------------- */
             case FINE_TUNE:
-#ifdef DEBUG_PRINT
+#ifdef VCTCXO_DEBUG
                 puts("\nFINE_TUNE\n");
 #endif
 
@@ -269,7 +269,7 @@ int main(void)
             default:
                 break;
 
-            } /* switch */
+            }
 
             /* Take PPS counters out of reset. */
             vctcxo_tamer_reset_counters(false);
@@ -277,7 +277,7 @@ int main(void)
             /* Enable interrupts. */
             vctcxo_tamer_enable_isr(true);
 
-        } /* VCTCXO Tamer interrupt. */
+        }
     }
 
     return 0;
