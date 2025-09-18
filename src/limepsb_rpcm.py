@@ -33,6 +33,7 @@ from limepsb_rpcm_platform import Platform
 
 from hdl.gpsdocfg.src.gpsdocfg         import GPSDOCFG
 from hdl.pps_detector.src.pps_detector import PPSDetector
+from hdl.vctcxo_tamer.src.vctcxo_tamer import VCTCXOTamer
 
 # CRG ----------------------------------------------------------------------------------------------
 
@@ -152,6 +153,7 @@ class BaseSoC(SoCCore):
 
         class Mailbox(LiteXModule):
             def __init__(self, soc):
+                self.irq              = Signal() # FIXME: Rename.
                 self.gpsdo_en         = CSRStatus()
                 self.vctcxo_tamer_irq = CSRStatus()
 
@@ -161,9 +163,9 @@ class BaseSoC(SoCCore):
 
                 self.sync += [
                     If(self.vctcxo_tamer_irq.we,
-                        self.vctcxo_tamer_irq.status.eq(vctcxo_tamer_irq)
+                        self.vctcxo_tamer_irq.status.eq(self.irq)
                     ).Else(
-                        self.vctcxo_tamer_irq.status.eq(vctcxo_tamer_irq | self.vctcxo_tamer_irq.status)
+                        self.vctcxo_tamer_irq.status.eq(self.irq | self.vctcxo_tamer_irq.status)
                     )
                 ]
 
@@ -270,61 +272,29 @@ class BaseSoC(SoCCore):
 
         # VCTCXO Tamer -----------------------------------------------------------------------------
 
-        # MMAP (Wishbone).
-        # ----------------
-        vctcxo_tamer_bus = wishbone.Interface(data_width=32, adr_width=32)
-        self.bus.add_slave("vctcxo_tamer", vctcxo_tamer_bus, region=SoCRegion(size=0x1000))
+        self.vctcxo_tamer = VCTCXOTamer(pps=pps)
+        self.vctcxo_tamer.add_sources()
+        self.bus.add_slave("vctcxo_tamer", self.vctcxo_tamer.bus, region=SoCRegion(size=0x1000))
+        self.comb += [
+            # IRQ.
+            self.mailbox.irq.eq(self.vctcxo_tamer.irq),
 
-        # Instance.
-        # ---------
-        self.specials += Instance("vctcxo_tamer",
-            # Clk/PPS Inputs.
-            i_vctcxo_clock       = ClockSignal("vctcxo"),
-            i_tune_ref           = pps,
+            # Config.
+            self.vctcxo_tamer.config_1s_target  .eq(self.gpsdocfg.config_1s_target  ),
+            self.vctcxo_tamer.config_1s_tol     .eq(self.gpsdocfg.config_1s_tol     ),
+            self.vctcxo_tamer.config_10s_target .eq(self.gpsdocfg.config_10s_target ),
+            self.vctcxo_tamer.config_10s_tol    .eq(self.gpsdocfg.config_10s_tol    ),
+            self.vctcxo_tamer.config_100s_target.eq(self.gpsdocfg.config_100s_target),
+            self.vctcxo_tamer.config_100s_tol   .eq(self.gpsdocfg.config_100s_tol   ),
 
-            # Wishbone Interface.
-            i_wb_clk_i           = ClockSignal("sys"),
-            i_wb_rst_i           = ResetSignal("sys"),
-            i_wb_adr_i           = vctcxo_tamer_bus.adr,
-            i_wb_dat_i           = vctcxo_tamer_bus.dat_w,
-            o_wb_dat_o           = vctcxo_tamer_bus.dat_r,
-            i_wb_we_i            = vctcxo_tamer_bus.we,
-            i_wb_stb_i           = vctcxo_tamer_bus.stb,
-            o_wb_ack_o           = vctcxo_tamer_bus.ack,
-            i_wb_cyc_i           = vctcxo_tamer_bus.cyc,
-            o_wb_int_o           = vctcxo_tamer_irq,
-
-            # Configuration Inputs.
-            i_PPS_1S_TARGET      = self.gpsdocfg.config_1s_target,
-            i_PPS_1S_ERROR_TOL   = self.gpsdocfg.config_1s_tol,
-            i_PPS_10S_TARGET     = self.gpsdocfg.config_10s_target,
-            i_PPS_10S_ERROR_TOL  = self.gpsdocfg.config_10s_tol,
-            i_PPS_100S_TARGET    = self.gpsdocfg.config_100s_target,
-            i_PPS_100S_ERROR_TOL = self.gpsdocfg.config_100s_tol,
-
-            # Status Output.
-            o_pps_1s_error       = self.gpsdocfg.status_1s_error,
-            o_pps_10s_error      = self.gpsdocfg.status_10s_error,
-            o_pps_100s_error     = self.gpsdocfg.status_100s_error,
-            o_accuracy           = self.gpsdocfg.status_accuracy,
-            o_state              = self.gpsdocfg.status_state,
-            o_dac_tuned_val      = self.gpsdocfg.status_dac_tuned_val
-        )
-
-        # VHD2V Conversion.
-        # -----------------
-        self.vhd2v_converter_vctcxo_tamer = VHD2VConverter(self.platform,
-            top_entity     = "vctcxo_tamer",
-            flatten_source = False,
-            files          = [
-                "hdl/vctcxo_tamer/src/edge_detector.vhd",
-                "hdl/vctcxo_tamer/src/handshake.vhd",
-                "hdl/vctcxo_tamer/src/pps_counter.vhd",
-                "hdl/vctcxo_tamer/src/reset_synchronizer.vhd",
-                "hdl/vctcxo_tamer/src/synchronizer.vhd",
-                "hdl/vctcxo_tamer/src/vctcxo_tamer.vhd",
-            ]
-        )
+            # Status.
+            self.gpsdocfg.status_1s_error      .eq(self.vctcxo_tamer.status_1s_error     ),
+            self.gpsdocfg.status_10s_error     .eq(self.vctcxo_tamer.status_10s_error    ),
+            self.gpsdocfg.status_100s_error    .eq(self.vctcxo_tamer.status_100s_error   ),
+            self.gpsdocfg.status_dac_tuned_val .eq(self.vctcxo_tamer.status_dac_tuned_val),
+            self.gpsdocfg.status_accuracy      .eq(self.vctcxo_tamer.status_accuracy     ),
+            self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state        ),
+        ]
 
 # Build -------------------------------------------------------------------------------------------
 def main():
