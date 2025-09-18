@@ -415,7 +415,7 @@ class BaseSoC(SoCCore):
             top_entity     = "vctcxo_tamer",
             flatten_source = False,
             files          = [
-                "hdl/vctcxo_tamer/edge_detector_fixed.vhd",
+                "hdl/vctcxo_tamer/edge_detector.vhd",
                 "hdl/vctcxo_tamer/handshake.vhd",
                 "hdl/vctcxo_tamer/pps_counter.vhd",
                 "hdl/vctcxo_tamer/reset_synchronizer.vhd",
