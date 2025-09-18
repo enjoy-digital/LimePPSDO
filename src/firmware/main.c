@@ -32,11 +32,13 @@
 #define SPI_DONE    (1 << 0)
 #define SPI_LENGTH  (1 << 8)
 
+#define VCTCXO_DEFAULT_DAC_VALUE 0x77FA
+
 /*-----------------------------------------------------------------------*/
 /* Global Variables                                                      */
 /*-----------------------------------------------------------------------*/
 
-uint16_t dac_val;
+uint16_t vctcxo_dac_value;
 struct vctcxo_tamer_pkt_buf vctcxo_tamer_pkt;
 
 /*-----------------------------------------------------------------------*/
@@ -97,8 +99,8 @@ int main(void)
     uint8_t vctcxo_tamer_en_old = 0;
 
     /* Set Default VCTCXO/DAC value. */
-    vctcxo_trim_dac_write(0x08, 0x77FA);
-    vctcxo_dac_set(0x0, 0x77FA);
+    vctcxo_trim_dac_write(0x08, VCTCXO_DEFAULT_DAC_VALUE);
+    vctcxo_dac_set(0x0,         VCTCXO_DEFAULT_DAC_VALUE);
 
     /* ---------- */
     /*  Main Loop */
@@ -146,8 +148,8 @@ int main(void)
 #endif
                 /* Set trim DAC to minimum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_min);
-                dac_val = (uint16_t)trimdac_min;
-                vctcxo_dac_set(0x0, dac_val);
+                vctcxo_dac_value = (uint16_t)trimdac_min;
+                vctcxo_dac_set(0x0, vctcxo_dac_value);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_MAX;
@@ -167,8 +169,8 @@ int main(void)
 
                 /* Set DAC to maximum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_max);
-                dac_val = (uint16_t)trimdac_max;
-                vctcxo_dac_set(0x0, dac_val);
+                vctcxo_dac_value = (uint16_t)trimdac_max;
+                vctcxo_dac_set(0x0, vctcxo_dac_value);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_DONE;
@@ -204,8 +206,8 @@ int main(void)
 
                 /* Set the trim DAC count to the y-intercept. */
                 vctcxo_trim_dac_write(0x08, trimdac_cal_line.y_intercept);
-                dac_val = (uint16_t)trimdac_cal_line.y_intercept;
-                vctcxo_dac_set(0x0, dac_val);
+                vctcxo_dac_value = (uint16_t)trimdac_cal_line.y_intercept;
+                vctcxo_dac_set(0x0, vctcxo_dac_value);
 
                 /* Set next interrupt state. */
                 tune_state = FINE_TUNE;
@@ -240,8 +242,8 @@ int main(void)
                     vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
 
                     /* Change DAC value. */
-                    dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    vctcxo_dac_set(0x0, dac_val);
+                    vctcxo_dac_value = (uint16_t)vctcxo_trim_dac_value;
+                    vctcxo_dac_set(0x0, vctcxo_dac_value);
                 }
                 else if (vctcxo_tamer_pkt.pps_10s_error_flag)
                 {
@@ -254,8 +256,8 @@ int main(void)
                     vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
 
                     /* Change DAC value. */
-                    dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    vctcxo_dac_set(0x0, dac_val);
+                    vctcxo_dac_value = (uint16_t)vctcxo_trim_dac_value;
+                    vctcxo_dac_set(0x0, vctcxo_dac_value);
                 }
                 else if (vctcxo_tamer_pkt.pps_100s_error_flag)
                 {
@@ -268,8 +270,8 @@ int main(void)
                     vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
 
                     /* Change DAC value. */
-                    dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    vctcxo_dac_set(0x0, dac_val);
+                    vctcxo_dac_value = (uint16_t)vctcxo_trim_dac_value;
+                    vctcxo_dac_set(0x0, vctcxo_dac_value);
                 }
 
                 break;
