@@ -31,6 +31,8 @@ from litex.soc.interconnect.csr import *
 
 from limepsb_rpcm_platform import Platform
 
+from hdl.gpsdocfg.src.gpsdocfg import GPSDOCFG
+
 # CRG ----------------------------------------------------------------------------------------------
 
 class _CRG(LiteXModule):
@@ -104,26 +106,6 @@ class BaseSoC(SoCCore):
         # RPi.
         rpi_sync_pads_i       = Signal()
 
-        # GPSDO Config.
-        gpsdo_en              = Signal()
-        gpsdo_clk_sel         = Signal()
-        gpsdo_tpulse_sel      = Signal(2)
-        gpsdo_rpi_sync_in_dir = Signal()
-        gpsdo_1s_target       = Signal(32)
-        gpsdo_1s_tol          = Signal(16)
-        gpsdo_10s_target      = Signal(32)
-        gpsdo_10s_tol         = Signal(16)
-        gpsdo_100s_target     = Signal(32)
-        gpsdo_100s_tol        = Signal(16)
-
-        # GPSDO Status.
-        gpsdo_1s_error        = Signal(32)
-        gpsdo_10s_error       = Signal(32)
-        gpsdo_100s_error      = Signal(32)
-        gpsdo_dac_tuned_val   = Signal(16)
-        gpsdo_accuracy        = Signal(4)
-        gpsdo_state           = Signal(4)
-
         # VCXO Tamer.
         vctcxo_tamer_irq      = Signal()
 
@@ -160,16 +142,21 @@ class BaseSoC(SoCCore):
             hw_version.eq(version_pads.hw),
         ]
 
+        # GPSDOCFG ---------------------------------------------------------------------------------
+
+        self.gpsdocfg = GPSDOCFG(spi_pads=rpi_spi1_pads)
+        self.gpsdocfg.add_sources()
+
         # Mailbox (SoC <-> CPU Communication) ------------------------------------------------------
 
         class Mailbox(LiteXModule):
-            def __init__(self):
+            def __init__(self, soc):
                 self.gpsdo_en         = CSRStatus()
                 self.vctcxo_tamer_irq = CSRStatus()
 
                 # # #
 
-                self.comb += self.gpsdo_en.status.eq(gpsdo_en)
+                self.comb += self.gpsdo_en.status.eq(soc.gpsdocfg.config_en)
 
                 self.sync += [
                     If(self.vctcxo_tamer_irq.we,
@@ -179,7 +166,7 @@ class BaseSoC(SoCCore):
                     )
                 ]
 
-        self.mailbox = Mailbox()
+        self.mailbox = Mailbox(soc=self)
 
         # TDD Redirection --------------------------------------------------------------------------
 
@@ -207,62 +194,6 @@ class BaseSoC(SoCCore):
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
-        # GPSDOCFG ---------------------------------------------------------------------------------
-
-        # Instance.
-        # ---------
-        self.specials += Instance("gpsdocfg",
-            # Config.
-            i_maddress                  = 0,
-            i_mimo_en                   = 1,
-
-            # SPI.
-            i_sdin                      = rpi_spi1_pads.mosi,
-            i_sclk                      = rpi_spi1_pads.sclk,
-            i_sen                       = rpi_spi1_pads.ss1,
-            o_sdout                     = rpi_spi1_pads.miso,
-
-            # Rst/Ctrl.
-            i_lreset                    = ResetSignal("sys"),
-            i_mreset                    = ResetSignal("sys"),
-            o_oen                       = Open(),
-
-            # Inputs.
-            i_PPS_1S_ERROR_in           = gpsdo_1s_error,
-            i_PPS_10S_ERROR_in          = gpsdo_10s_error,
-            i_PPS_100S_ERROR_in         = gpsdo_100s_error,
-            i_DAC_TUNED_VAL_in          = gpsdo_dac_tuned_val,
-            i_ACCURACY_in               = gpsdo_accuracy,
-            i_STATE_in                  = gpsdo_state,
-            i_TPULSE_ACTIVE_in          = pps_active,
-
-            # Outputs.
-            o_IICFG_EN_out              = gpsdo_en,
-            o_IICFG_CLK_SEL_out         = gpsdo_clk_sel,
-            o_IICFG_TPULSE_SEL_out      = gpsdo_tpulse_sel,
-            o_IICFG_RPI_SYNC_IN_DIR_out = gpsdo_rpi_sync_in_dir,
-            o_IICFG_1S_TARGET_out       = gpsdo_1s_target,
-            o_IICFG_1S_TOL_out          = gpsdo_1s_tol,
-            o_IICFG_10S_TARGET_out      = gpsdo_10s_target,
-            o_IICFG_10S_TOL_out         = gpsdo_10s_tol,
-            o_IICFG_100S_TARGET_out     = gpsdo_100s_target,
-            o_IICFG_100S_TOL_out        = gpsdo_100s_tol
-        )
-
-        # VHD2V Conversion.
-        # -----------------
-        self.vhd2v_converter_gpsdocfg = VHD2VConverter(self.platform,
-            top_entity     = "gpsdocfg",
-            flatten_source = False,
-            files          = [
-                "hdl/gpsdocfg/src/revisions.vhd",
-                "hdl/gpsdocfg/src/gpsdocfg.vhd",
-                "hdl/gpsdocfg/src/mcfg32wm_fsm.vhd",
-                "hdl/gpsdocfg/src/mem_package.vhd",
-            ]
-        )
-        self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
-
         # PPS Selection ----------------------------------------------------------------------------
 
         rpi_sync_pads_o_resync  = Signal()
@@ -274,7 +205,7 @@ class BaseSoC(SoCCore):
             MultiReg(gnss_pads.tpulse, gnss_pads_tpulse_resync, "vctcxo"),
         ]
 
-        self.comb += Case(gpsdo_tpulse_sel, {
+        self.comb += Case(self.gpsdocfg.config_tpulse_sel, {
             0b01      : pps.eq(rpi_sync_pads_o_resync),  # RPI_SYNC_OUT.
             0b10      : pps.eq(rpi_sync_pads_i_resync),  # RPI_SYNC_IN.
             "default" : pps.eq(gnss_pads_tpulse_resync), # GNSS_TPULSE (default).
@@ -309,11 +240,11 @@ class BaseSoC(SoCCore):
 
         # Led --------------------------------------------------------------------------------------
 
-        self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & gpsdo_en))
+        self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & self.gpsdocfg.config_en))
 
         # VCTCXO Clk Selection ---------------------------------------------------------------------
 
-        self.comb += Case(gpsdo_clk_sel, {
+        self.comb += Case(self.gpsdocfg.config_clk_sel, {
             0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
             0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
         })
@@ -329,14 +260,14 @@ class BaseSoC(SoCCore):
         # ------------------
         self.comb += [
             # SPI0 controlled from Rpi.
-            If(gpsdo_en == 0b0,
+            If(self.gpsdocfg.config_en == 0b0,
                 fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
                 fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
             ),
 
             # SPI0 controlled from CPU.
-            If(gpsdo_en == 0b1,
+            If(self.gpsdocfg.config_en == 0b1,
                 fpga_spi0_pads.sclk.eq(spi_pads.clk),
                 fpga_spi0_pads.mosi.eq(spi_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
@@ -353,7 +284,7 @@ class BaseSoC(SoCCore):
             io  = rpi_sync_pads.i,
             i   = rpi_sync_pads_i,
             o   = gnss_pads.tpulse,
-            oe  = ~((gpsdo_rpi_sync_in_dir == 0) | (gpsdo_tpulse_sel == 0b10)),
+            oe  = ~((self.gpsdocfg.config_rpi_sync_in_dir == 0) | (self.gpsdocfg.config_tpulse_sel == 0b10)),
             clk = ClockSignal("sys"),
         )
 
@@ -384,20 +315,20 @@ class BaseSoC(SoCCore):
             o_wb_int_o           = vctcxo_tamer_irq,
 
             # Configuration Inputs.
-            i_PPS_1S_TARGET      = gpsdo_1s_target,
-            i_PPS_1S_ERROR_TOL   = gpsdo_1s_tol,
-            i_PPS_10S_TARGET     = gpsdo_10s_target,
-            i_PPS_10S_ERROR_TOL  = gpsdo_10s_tol,
-            i_PPS_100S_TARGET    = gpsdo_100s_target,
-            i_PPS_100S_ERROR_TOL = gpsdo_100s_tol,
+            i_PPS_1S_TARGET      = self.gpsdocfg.config_1s_target,
+            i_PPS_1S_ERROR_TOL   = self.gpsdocfg.config_1s_tol,
+            i_PPS_10S_TARGET     = self.gpsdocfg.config_10s_target,
+            i_PPS_10S_ERROR_TOL  = self.gpsdocfg.config_10s_tol,
+            i_PPS_100S_TARGET    = self.gpsdocfg.config_100s_target,
+            i_PPS_100S_ERROR_TOL = self.gpsdocfg.config_100s_tol,
 
             # Status Output.
-            o_pps_1s_error       = gpsdo_1s_error,
-            o_pps_10s_error      = gpsdo_10s_error,
-            o_pps_100s_error     = gpsdo_100s_error,
-            o_accuracy           = gpsdo_accuracy,
-            o_state              = gpsdo_state,
-            o_dac_tuned_val      = gpsdo_dac_tuned_val
+            o_pps_1s_error       = self.gpsdocfg.status_1s_error,
+            o_pps_10s_error      = self.gpsdocfg.status_10s_error,
+            o_pps_100s_error     = self.gpsdocfg.status_100s_error,
+            o_accuracy           = self.gpsdocfg.status_accuracy,
+            o_state              = self.gpsdocfg.status_state,
+            o_dac_tuned_val      = self.gpsdocfg.status_dac_tuned_val
         )
 
         # VHD2V Conversion.
