@@ -137,12 +137,14 @@ int main(void)
 
         /* Enable or disable VCTCXO Tamer module depending on enable signal. */
         if (vctcxo_tamer_en_old != vctcxo_tamer_en) {
-            if (vctcxo_tamer_en == 0x01) {  /* Enable. */
+            /* Enable. */
+            if (vctcxo_tamer_en == 0x01) {
                 vctcxo_tamer_init();
                 tune_state = COARSE_TUNE_MIN;
                 vctcxo_tamer_pkt.ready = true;
             }
-            else {  /* Disable. */
+            /* Disable. */
+            else {
                 vctcxo_tamer_dis();
                 tune_state = COARSE_TUNE_MIN;
                 vctcxo_tamer_pkt.ready = false;
