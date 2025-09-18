@@ -31,7 +31,8 @@ from litex.soc.interconnect.csr import *
 
 from limepsb_rpcm_platform import Platform
 
-from hdl.gpsdocfg.src.gpsdocfg import GPSDOCFG
+from hdl.gpsdocfg.src.gpsdocfg         import GPSDOCFG
+from hdl.pps_detector.src.pps_detector import PPSDetector
 
 # CRG ----------------------------------------------------------------------------------------------
 
@@ -211,32 +212,11 @@ class BaseSoC(SoCCore):
             "default" : pps.eq(gnss_pads_tpulse_resync), # GNSS_TPULSE (default).
         })
 
-        # PPS Detection ----------------------------------------------------------------------------
+        # PPS Detector -----------------------------------------------------------------------------
 
-        # Instance.
-        # ---------
-        self.specials += Instance("pps_detector",
-            # Clk/Rst.
-            i_clk        = ClockSignal("sys"),
-            i_reset      = ResetSignal("sys"),
-
-            # PPS Input/Output.
-            i_pps        = pps,
-            o_pps_active = pps_active
-        )
-
-        # VHD2V Conversion.
-        # -----------------
-        self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
-            top_entity     = "pps_detector",
-            params         = dict(
-                p_CLK_FREQ_HZ = sys_clk_freq,
-                p_TOLERANCE   = 5000000,
-            ),
-            flatten_source = False,
-            files          = ["hdl/pps_detector/src/pps_detector.vhd"]
-        )
-        self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
+        self.pps_detector = PPSDetector(pps=pps)
+        self.pps_detector.add_sources()
+        self.comb += self.gpsdocfg.status_pps_active.eq(self.pps_detector.pps_active)
 
         # Led --------------------------------------------------------------------------------------
 
