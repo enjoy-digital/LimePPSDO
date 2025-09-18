@@ -76,7 +76,7 @@ class _CRG(LiteXModule):
 
 # BaseSoC ------------------------------------------------------------------------------------------
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=6e6, firmware_path=None, with_fake_pps=False, **kwargs):
+    def __init__(self, sys_clk_freq=6e6, firmware_path=None, **kwargs):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
@@ -273,21 +273,6 @@ class BaseSoC(SoCCore):
 
         self.comb += pps.eq(gnss_pads.tpulse)
         self.comb += rpi_uart0_pads.rx.eq(gnss_pads.tpulse)
-
-        # PPS Fake (To ease testing) ---------------------------------------------------------------
-
-        if with_fake_pps:
-            pps_fake  = Signal()
-            pps_count = Signal(32)
-            self.sync.clk10 += [
-                pps_count.eq(pps_count + 1),
-                pps_fake.eq(0),
-                If(pps_count == int(10e6) - 1,
-                    pps_count.eq(0),
-                    pps_fake.eq(1)
-                )
-            ]
-            self.comb += pps.eq(pps_fake)
 
         # PPS Detection ----------------------------------------------------------------------------
 
