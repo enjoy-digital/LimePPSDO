@@ -255,10 +255,10 @@ class BaseSoC(SoCCore):
             top_entity     = "gpsdocfg",
             flatten_source = False,
             files          = [
-                "hdl/gpsdocfg/revisions.vhd",
-                "hdl/gpsdocfg/gpsdocfg.vhd",
-                "hdl/gpsdocfg/mcfg32wm_fsm.vhd",
-                "hdl/gpsdocfg/mem_package.vhd",
+                "hdl/gpsdocfg/src/revisions.vhd",
+                "hdl/gpsdocfg/src/gpsdocfg.vhd",
+                "hdl/gpsdocfg/src/mcfg32wm_fsm.vhd",
+                "hdl/gpsdocfg/src/mem_package.vhd",
             ]
         )
         self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
@@ -303,7 +303,7 @@ class BaseSoC(SoCCore):
                 p_TOLERANCE   = 5000000,
             ),
             flatten_source = False,
-            files          = ["hdl/pps_detector/pps_detector.vhd"]
+            files          = ["hdl/pps_detector/src/pps_detector.vhd"]
         )
         self.vhd2v_converter_pps_detector._ghdl_opts.append("-fsynopsys")
 
@@ -406,12 +406,12 @@ class BaseSoC(SoCCore):
             top_entity     = "vctcxo_tamer",
             flatten_source = False,
             files          = [
-                "hdl/vctcxo_tamer/edge_detector.vhd",
-                "hdl/vctcxo_tamer/handshake.vhd",
-                "hdl/vctcxo_tamer/pps_counter.vhd",
-                "hdl/vctcxo_tamer/reset_synchronizer.vhd",
-                "hdl/vctcxo_tamer/synchronizer.vhd",
-                "hdl/vctcxo_tamer/vctcxo_tamer.vhd",
+                "hdl/vctcxo_tamer/src/edge_detector.vhd",
+                "hdl/vctcxo_tamer/src/handshake.vhd",
+                "hdl/vctcxo_tamer/src/pps_counter.vhd",
+                "hdl/vctcxo_tamer/src/reset_synchronizer.vhd",
+                "hdl/vctcxo_tamer/src/synchronizer.vhd",
+                "hdl/vctcxo_tamer/src/vctcxo_tamer.vhd",
             ]
         )
 
