@@ -376,11 +376,11 @@ class BaseSoC(SoCCore):
 
             # Configuration Inputs.
             i_PPS_1S_TARGET      = gpsdo_1s_target,
-            i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdo_1s_tol),
+            i_PPS_1S_ERROR_TOL   = gpsdo_1s_tol,
             i_PPS_10S_TARGET     = gpsdo_10s_target,
-            i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdo_10s_tol),
+            i_PPS_10S_ERROR_TOL  = gpsdo_10s_tol,
             i_PPS_100S_TARGET    = gpsdo_100s_target,
-            i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdo_100s_tol),
+            i_PPS_100S_ERROR_TOL = gpsdo_100s_tol,
 
             # Status Output.
             o_pps_1s_error       = gpsdo_1s_error,
