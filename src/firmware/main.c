@@ -231,6 +231,7 @@ int main(void)
 
                 if (vctcxo_tamer_pkt.pps_1s_error_flag)
                 {
+                    /* Calculate new DAC value. */
                     vctcxo_trim_dac_value = (
                         vctcxo_trim_dac_value -
                         (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_1s_error * trimdac_cal_line.slope) / 1));
@@ -244,6 +245,7 @@ int main(void)
                 }
                 else if (vctcxo_tamer_pkt.pps_10s_error_flag)
                 {
+                    /* Calculate new DAC value. */
                     vctcxo_trim_dac_value = (
                         vctcxo_trim_dac_value -
                         (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_10s_error * trimdac_cal_line.slope) / 10));
@@ -257,6 +259,7 @@ int main(void)
                 }
                 else if (vctcxo_tamer_pkt.pps_100s_error_flag)
                 {
+                    /* Calculate new DAC value. */
                     vctcxo_trim_dac_value = (
                         vctcxo_trim_dac_value -
                         (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_100s_error * trimdac_cal_line.slope) / 100));
