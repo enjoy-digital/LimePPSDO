@@ -13,6 +13,7 @@ import os
 import argparse
 
 from migen import *
+from migen.genlib.cdc       import MultiReg
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.gen import *
@@ -202,7 +203,7 @@ class BaseSoC(SoCCore):
             gnss_pads.reset.eq(1),
 
             # GNSS UART (Connect to RPI UART0).
-            #rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
+            rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
@@ -264,15 +265,20 @@ class BaseSoC(SoCCore):
 
         # PPS Selection ----------------------------------------------------------------------------
 
-        #self.comb += Case(gpsdo_tpulse_sel, {
-        #    0b01 : pps.eq(rpi_sync_pads.o),  # RPI_SYNC_OUT.
-        #    0b10 : pps.eq(rpi_sync_pads_i),  # RPI_SYNC_IN.
-        #    0b00 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
-        #    0b11 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
-        #})
+        rpi_sync_pads_o_resync  = Signal()
+        rpi_sync_pads_i_resync  = Signal()
+        gnss_pads_tpulse_resync = Signal()
+        self.specials += [
+            MultiReg(rpi_sync_pads.o,   rpi_sync_pads_o_resync, "vctcxo"),
+            MultiReg(rpi_sync_pads_i,   rpi_sync_pads_i_resync, "vctcxo"),
+            MultiReg(gnss_pads.tpulse, gnss_pads_tpulse_resync, "vctcxo"),
+        ]
 
-        self.comb += pps.eq(gnss_pads.tpulse)
-        self.comb += rpi_uart0_pads.rx.eq(gnss_pads.tpulse)
+        self.comb += Case(gpsdo_tpulse_sel, {
+            0b01      : pps.eq(rpi_sync_pads_o_resync),  # RPI_SYNC_OUT.
+            0b10      : pps.eq(rpi_sync_pads_i_resync),  # RPI_SYNC_IN.
+            "default" : pps.eq(gnss_pads_tpulse_resync), # GNSS_TPULSE (default).
+        })
 
         # PPS Detection ----------------------------------------------------------------------------
 
@@ -293,7 +299,7 @@ class BaseSoC(SoCCore):
         self.vhd2v_converter_pps_detector = VHD2VConverter(self.platform,
             top_entity     = "pps_detector",
             params         = dict(
-                p_CLK_FREQ_HZ = 6000000,
+                p_CLK_FREQ_HZ = sys_clk_freq,
                 p_TOLERANCE   = 5000000,
             ),
             flatten_source = False,
