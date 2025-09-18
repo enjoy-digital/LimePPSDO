@@ -36,8 +36,8 @@
 /* Global Variables                                                      */
 /*-----------------------------------------------------------------------*/
 
+uint16_t dac_val;
 struct vctcxo_tamer_pkt_buf vctcxo_tamer_pkt;
-uint16_t dac_val = 30714;
 
 /*-----------------------------------------------------------------------*/
 /* Helpers                                                               */
@@ -96,17 +96,20 @@ int main(void)
     uint8_t vctcxo_tamer_en     = 0;
     uint8_t vctcxo_tamer_en_old = 0;
 
-    /* Set Default VCTCXO DAC value. */
+    /* Set Default VCTCXO/DAC value. */
     vctcxo_trim_dac_write(0x08, 0x77FA);
-    Control_TCXO_DAC(0x0, 0x77FA);  /* Set DAC in normal operation mode, set new val. */
+    Control_TCXO_DAC(0x0, 0x77FA);
 
+    /* ---------- */
+    /*  Main Loop */
+    /* ---------- */
     while (1)
     {
         /* Get VCTCXO Tamer enable bit status. */
         vctcxo_tamer_en_old = vctcxo_tamer_en;
         vctcxo_tamer_en     = mailbox_gpsdo_en_read();
 
-        /* Get VCTCXO Tamer irq. */
+        /* Get VCTCXO Tamer irq status. */
         if (mailbox_vctcxo_tamer_irq_read()) {
             vctcxo_tamer_isr(&vctcxo_tamer_pkt);
             mailbox_vctcxo_tamer_irq_read();
@@ -134,41 +137,48 @@ int main(void)
             switch (tune_state)
             {
 
-            /* COARSE TUNE MIN */
+            /* --------------------- */
+            /* COARSE TUNE MIN State */
+            /* --------------------- */
             case COARSE_TUNE_MIN:
 #ifdef DEBUG_PRINT
                 puts("\nCOARSE_TUNE_MIN\n");
 #endif
-                /* Tune to the minimum DAC value. */
+                /* Set trim DAC to minimum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_min);
                 dac_val = (uint16_t)trimdac_min;
-                Control_TCXO_DAC(0x0, dac_val);  /* Set DAC in normal operation mode, set new val. */
+                Control_TCXO_DAC(0x0, dac_val);
 
-                /* State to enter upon the next interrupt. */
+                /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_MAX;
 
                 break;
 
-            /* COARSE TUNE MAX */
+            /* ----------------------- */
+            /* COARSE TUNE MAX State   */
+            /* ----------------------- */
             case COARSE_TUNE_MAX:
 #ifdef DEBUG_PRINT
                 puts("\nCOARSE_TUNE_MAX\n");
 #endif
-                /* We have the error from the minimum DAC setting, store it
-                 * as the 'x' coordinate for the first point. */
+                /* We have the error from the minimum DAC setting, store it as
+                   the 'x' coordinate for the first point. */
                 trimdac_cal_line.point[0].x = vctcxo_tamer_pkt.pps_1s_error;
 
-                /* Tune to the maximum DAC value. */
+                /* Set DAC to maximum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_max);
                 dac_val = (uint16_t)trimdac_max;
-                Control_TCXO_DAC(0x0, dac_val);  /* Set DAC in normal operation mode, set new val. */
+                Control_TCXO_DAC(0x0, dac_val);
 
-                /* State to enter upon the next interrupt. */
+                /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_DONE;
 
                 break;
 
-            /* COARSE TUNE DONE */
+            /* ---------------------- */
+            /* COARSE TUNE DONE State */
+            /* ---------------------- */
+
             case COARSE_TUNE_DONE:
 #ifdef DEBUG_PRINT
                 puts("\nCOARSE_TUNE_DONE\n");
@@ -176,74 +186,87 @@ int main(void)
                 /* Write status to state register. */
                 vctcxo_tamer_write(VT_STATE_ADDR, 0x01);
 
-                /* We have the error from the maximum DAC setting, store it
-                 * as the 'x' coordinate for the second point. */
+                /* We have the error from the maximum DAC setting, store it as
+                   the 'x' coordinate for the second point. */
                 trimdac_cal_line.point[1].x = vctcxo_tamer_pkt.pps_1s_error;
 
-                /* We now have two points, so we can calculate the equation
-                 * for a line plotted with DAC counts on the Y axis and
-                 * error on the X axis. We want a PPM of zero, which ideally
-                 * corresponds to the y-intercept of the line. */
+                /* We now have two points, so we can calculate the equation for
+                   a line plotted with DAC counts on the Y axis and error on
+                   the X axis. We want a PPM of zero, which ideally corresponds
+                   to the y-intercept of the line. */
+                trimdac_cal_line.slope = (
+                    (float)(trimdac_cal_line.point[1].y - trimdac_cal_line.point[0].y) /
+                    (float)(trimdac_cal_line.point[1].x - trimdac_cal_line.point[0].x));
 
-                trimdac_cal_line.slope = ((float)(trimdac_cal_line.point[1].y - trimdac_cal_line.point[0].y) / (float)(trimdac_cal_line.point[1].x - trimdac_cal_line.point[0].x));
-
-                trimdac_cal_line.y_intercept = (trimdac_cal_line.point[0].y -
-                                                (uint16_t)(lroundf(trimdac_cal_line.slope * (float)trimdac_cal_line.point[0].x)));
+                trimdac_cal_line.y_intercept = (
+                    trimdac_cal_line.point[0].y -
+                    (uint16_t)(lroundf(trimdac_cal_line.slope * (float)trimdac_cal_line.point[0].x)));
 
                 /* Set the trim DAC count to the y-intercept. */
                 vctcxo_trim_dac_write(0x08, trimdac_cal_line.y_intercept);
                 dac_val = (uint16_t)trimdac_cal_line.y_intercept;
-                Control_TCXO_DAC(0x0, dac_val);  /* Set DAC in normal operation mode, set new val. */
+                Control_TCXO_DAC(0x0, dac_val);
 
-                /* State to enter upon the next interrupt. */
+                /* Set next interrupt state. */
                 tune_state = FINE_TUNE;
 
                 break;
 
-            /* FINE TUNE */
+            /* --------------- */
+            /* FINE TUNE State */
+            /* --------------- */
             case FINE_TUNE:
 #ifdef DEBUG_PRINT
                 puts("\nFINE_TUNE\n");
 #endif
 
-                /* We should be extremely close to a perfectly tuned
-                 * VCTCXO, but some minor adjustments need to be made. */
+                /* We should be extremely close to a perfectly tuned VCTCXO, but
+                   some minor adjustments need to be made. */
 
-                /* Check the magnitude of the errors starting with the
-                 * one second count. If an error is greater than the maximum
-                 * tolerated error, adjust the trim DAC by the error (Hz)
-                 * multiplied by the slope (in counts/Hz) and scale the
-                 * result by the precision interval (e.g. 1s, 10s, 100s). */
+                /* Check the magnitude of the errors starting with the one
+                   second count. If an error is greater than the maximum
+                   tolerated error, adjust the trim DAC by the error
+                   (Hz) multiplied by the slope (in counts/Hz) and scale the
+                   result by the precision interval (e.g. 1s, 10s, 100s). */
 
                 if (vctcxo_tamer_pkt.pps_1s_error_flag)
                 {
-                    vctcxo_trim_dac_value = (vctcxo_trim_dac_value -
-                                             (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_1s_error * trimdac_cal_line.slope) / 1));
+                    vctcxo_trim_dac_value = (
+                        vctcxo_trim_dac_value -
+                        (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_1s_error * trimdac_cal_line.slope) / 1));
+
                     /* Write tuned val to VCTCXO Tamer registers. */
                     vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
+
                     /* Change DAC value. */
                     dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    Control_TCXO_DAC(0x0, dac_val);  /* Set DAC in normal operation mode, set new val. */
+                    Control_TCXO_DAC(0x0, dac_val);
                 }
                 else if (vctcxo_tamer_pkt.pps_10s_error_flag)
                 {
-                    vctcxo_trim_dac_value = (vctcxo_trim_dac_value -
-                                             (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_10s_error * trimdac_cal_line.slope) / 10));
+                    vctcxo_trim_dac_value = (
+                        vctcxo_trim_dac_value -
+                        (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_10s_error * trimdac_cal_line.slope) / 10));
+
                     /* Write tuned val to VCTCXO Tamer registers. */
                     vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
+
                     /* Change DAC value. */
                     dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    Control_TCXO_DAC(0x0, dac_val);  /* Set DAC in normal operation mode, set new val. */
+                    Control_TCXO_DAC(0x0, dac_val);
                 }
                 else if (vctcxo_tamer_pkt.pps_100s_error_flag)
                 {
-                    vctcxo_trim_dac_value = (vctcxo_trim_dac_value -
-                                             (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_100s_error * trimdac_cal_line.slope) / 100));
+                    vctcxo_trim_dac_value = (
+                        vctcxo_trim_dac_value -
+                        (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_100s_error * trimdac_cal_line.slope) / 100));
+
                     /* Write tuned val to VCTCXO Tamer registers. */
                     vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
+
                     /* Change DAC value. */
                     dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    Control_TCXO_DAC(0x0, dac_val);  /* Set DAC in normal operation mode, set new val. */
+                    Control_TCXO_DAC(0x0, dac_val);
                 }
 
                 break;
