@@ -38,7 +38,6 @@
 /* Global Variables                                                      */
 /*-----------------------------------------------------------------------*/
 
-uint16_t vctcxo_dac_value;
 struct vctcxo_tamer_pkt_buf vctcxo_tamer_pkt;
 
 /*-----------------------------------------------------------------------*/
@@ -64,6 +63,25 @@ static void vctcxo_dac_set(uint8_t pd, uint16_t data) {
 
     /* Wait SPI Xfer to be done. */
     while (spi_status_read() != SPI_DONE);
+}
+
+/* Adjusts the trim DAC value based on error, slope, and scale.
+ *
+ * @param error The PPS error value.
+ * @param slope The calibration slope.
+ * @param scale The scaling factor (1, 10, or 100).
+ */
+static void adjust_trim_dac(int32_t error, float slope, int scale) {
+    /* Compute new trim DAC value */
+    vctcxo_trim_dac_value = (
+        vctcxo_trim_dac_value -
+        (uint16_t)(lroundf((float)error * slope) / scale));
+
+    /* Write value to VCTCXO Tamer. */
+    vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
+
+    /* Write value to DAC. */
+    vctcxo_dac_set(0x0, vctcxo_trim_dac_value);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -148,8 +166,7 @@ int main(void)
 #endif
                 /* Set trim DAC to minimum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_min);
-                vctcxo_dac_value = (uint16_t)trimdac_min;
-                vctcxo_dac_set(0x0, vctcxo_dac_value);
+                vctcxo_dac_set(0x0, trimdac_min);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_MAX;
@@ -169,8 +186,7 @@ int main(void)
 
                 /* Set DAC to maximum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_max);
-                vctcxo_dac_value = (uint16_t)trimdac_max;
-                vctcxo_dac_set(0x0, vctcxo_dac_value);
+                vctcxo_dac_set(0x0, trimdac_max);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_DONE;
@@ -196,18 +212,22 @@ int main(void)
                    a line plotted with DAC counts on the Y axis and error on
                    the X axis. We want a PPM of zero, which ideally corresponds
                    to the y-intercept of the line. */
-                trimdac_cal_line.slope = (
-                    (float)(trimdac_cal_line.point[1].y - trimdac_cal_line.point[0].y) /
-                    (float)(trimdac_cal_line.point[1].x - trimdac_cal_line.point[0].x));
+                if ((trimdac_cal_line.point[1].x - trimdac_cal_line.point[0].x) != 0) {
+                    trimdac_cal_line.slope = (
+                        (float)(trimdac_cal_line.point[1].y - trimdac_cal_line.point[0].y) /
+                        (float)(trimdac_cal_line.point[1].x - trimdac_cal_line.point[0].x));
 
-                trimdac_cal_line.y_intercept = (
-                    trimdac_cal_line.point[0].y -
-                    (uint16_t)(lroundf(trimdac_cal_line.slope * (float)trimdac_cal_line.point[0].x)));
+                    trimdac_cal_line.y_intercept = (
+                        trimdac_cal_line.point[0].y -
+                        (uint16_t)(lroundf(trimdac_cal_line.slope * (float)trimdac_cal_line.point[0].x)));
+                } else {
+                    /* Handle division by zero (rare, but set to default). */
+                    trimdac_cal_line.y_intercept = VCTCXO_DEFAULT_DAC_VALUE;
+                }
 
                 /* Set the trim DAC count to the y-intercept. */
                 vctcxo_trim_dac_write(0x08, trimdac_cal_line.y_intercept);
-                vctcxo_dac_value = (uint16_t)trimdac_cal_line.y_intercept;
-                vctcxo_dac_set(0x0, vctcxo_dac_value);
+                vctcxo_dac_set(0x0, trimdac_cal_line.y_intercept);
 
                 /* Set next interrupt state. */
                 tune_state = FINE_TUNE;
@@ -233,45 +253,15 @@ int main(void)
 
                 if (vctcxo_tamer_pkt.pps_1s_error_flag)
                 {
-                    /* Calculate new DAC value. */
-                    vctcxo_trim_dac_value = (
-                        vctcxo_trim_dac_value -
-                        (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_1s_error * trimdac_cal_line.slope) / 1));
-
-                    /* Write tuned val to VCTCXO Tamer registers. */
-                    vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
-
-                    /* Change DAC value. */
-                    vctcxo_dac_value = (uint16_t)vctcxo_trim_dac_value;
-                    vctcxo_dac_set(0x0, vctcxo_dac_value);
+                    adjust_trim_dac(vctcxo_tamer_pkt.pps_1s_error, trimdac_cal_line.slope, 1);
                 }
                 else if (vctcxo_tamer_pkt.pps_10s_error_flag)
                 {
-                    /* Calculate new DAC value. */
-                    vctcxo_trim_dac_value = (
-                        vctcxo_trim_dac_value -
-                        (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_10s_error * trimdac_cal_line.slope) / 10));
-
-                    /* Write tuned val to VCTCXO Tamer registers. */
-                    vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
-
-                    /* Change DAC value. */
-                    vctcxo_dac_value = (uint16_t)vctcxo_trim_dac_value;
-                    vctcxo_dac_set(0x0, vctcxo_dac_value);
+                    adjust_trim_dac(vctcxo_tamer_pkt.pps_10s_error, trimdac_cal_line.slope, 10);
                 }
                 else if (vctcxo_tamer_pkt.pps_100s_error_flag)
                 {
-                    /* Calculate new DAC value. */
-                    vctcxo_trim_dac_value = (
-                        vctcxo_trim_dac_value -
-                        (uint16_t)(lroundf((float)vctcxo_tamer_pkt.pps_100s_error * trimdac_cal_line.slope) / 100));
-
-                    /* Write tuned val to VCTCXO Tamer registers. */
-                    vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
-
-                    /* Change DAC value. */
-                    vctcxo_dac_value = (uint16_t)vctcxo_trim_dac_value;
-                    vctcxo_dac_set(0x0, vctcxo_dac_value);
+                    adjust_trim_dac(vctcxo_tamer_pkt.pps_100s_error, trimdac_cal_line.slope, 100);
                 }
 
                 break;
