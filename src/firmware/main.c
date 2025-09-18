@@ -289,15 +289,3 @@ int main(void)
 
   return 0;
 }
-
-#if 0
-// handler functions for the external interrupt channels:
-// - must not have parameters nor a return value
-// - should not use the interrupt attribute, as they can be normal functions called by the actual interrupt handler
-
-void ext_irq_ch0_handler(void)
-{
-  vctcxo_tamer_isr(&vctcxo_tamer_pkt);
-}
-
-#endif
