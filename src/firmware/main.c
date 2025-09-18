@@ -43,12 +43,12 @@ struct vctcxo_tamer_pkt_buf vctcxo_tamer_pkt;
 /* Helpers                                                               */
 /*-----------------------------------------------------------------------*/
 
-/* Controls the TCXO DAC (AD5662) via SPI.
+/* Sets the VCTCXO DAC value via SPI.
  *
  * @param pd   Power-down control bits (PD1 PD0).
  * @param data 16-bit DAC value.
  */
-static void Control_TCXO_DAC(uint8_t pd, uint16_t data) {
+static void vctcxo_dac_set(uint8_t pd, uint16_t data) {
     uint32_t word;
 
     /* Prepare Word. */
@@ -98,7 +98,7 @@ int main(void)
 
     /* Set Default VCTCXO/DAC value. */
     vctcxo_trim_dac_write(0x08, 0x77FA);
-    Control_TCXO_DAC(0x0, 0x77FA);
+    vctcxo_dac_set(0x0, 0x77FA);
 
     /* ---------- */
     /*  Main Loop */
@@ -147,7 +147,7 @@ int main(void)
                 /* Set trim DAC to minimum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_min);
                 dac_val = (uint16_t)trimdac_min;
-                Control_TCXO_DAC(0x0, dac_val);
+                vctcxo_dac_set(0x0, dac_val);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_MAX;
@@ -168,7 +168,7 @@ int main(void)
                 /* Set DAC to maximum value. */
                 vctcxo_trim_dac_write(0x08, trimdac_max);
                 dac_val = (uint16_t)trimdac_max;
-                Control_TCXO_DAC(0x0, dac_val);
+                vctcxo_dac_set(0x0, dac_val);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_DONE;
@@ -205,7 +205,7 @@ int main(void)
                 /* Set the trim DAC count to the y-intercept. */
                 vctcxo_trim_dac_write(0x08, trimdac_cal_line.y_intercept);
                 dac_val = (uint16_t)trimdac_cal_line.y_intercept;
-                Control_TCXO_DAC(0x0, dac_val);
+                vctcxo_dac_set(0x0, dac_val);
 
                 /* Set next interrupt state. */
                 tune_state = FINE_TUNE;
@@ -240,7 +240,7 @@ int main(void)
 
                     /* Change DAC value. */
                     dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    Control_TCXO_DAC(0x0, dac_val);
+                    vctcxo_dac_set(0x0, dac_val);
                 }
                 else if (vctcxo_tamer_pkt.pps_10s_error_flag)
                 {
@@ -253,7 +253,7 @@ int main(void)
 
                     /* Change DAC value. */
                     dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    Control_TCXO_DAC(0x0, dac_val);
+                    vctcxo_dac_set(0x0, dac_val);
                 }
                 else if (vctcxo_tamer_pkt.pps_100s_error_flag)
                 {
@@ -266,7 +266,7 @@ int main(void)
 
                     /* Change DAC value. */
                     dac_val = (uint16_t)vctcxo_trim_dac_value;
-                    Control_TCXO_DAC(0x0, dac_val);
+                    vctcxo_dac_set(0x0, dac_val);
                 }
 
                 break;
