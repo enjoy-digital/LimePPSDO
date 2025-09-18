@@ -76,7 +76,7 @@ class _CRG(LiteXModule):
 
 # BaseSoC ------------------------------------------------------------------------------------------
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=6e6, firmware_path=None, with_fake_pps=True, **kwargs):
+    def __init__(self, sys_clk_freq=6e6, firmware_path=None, with_fake_pps=False, **kwargs):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
@@ -202,7 +202,7 @@ class BaseSoC(SoCCore):
             gnss_pads.reset.eq(1),
 
             # GNSS UART (Connect to RPI UART0).
-            rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
+            #rpi_uart0_pads.rx.eq(gnss_pads.uart_tx),
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
@@ -264,12 +264,15 @@ class BaseSoC(SoCCore):
 
         # PPS Selection ----------------------------------------------------------------------------
 
-        self.comb += Case(gpsdo_tpulse_sel, {
-            0b01 : pps.eq(rpi_sync_pads.o),  # RPI_SYNC_OUT.
-            0b10 : pps.eq(rpi_sync_pads_i),  # RPI_SYNC_IN.
-            0b00 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
-            0b11 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
-        })
+        #self.comb += Case(gpsdo_tpulse_sel, {
+        #    0b01 : pps.eq(rpi_sync_pads.o),  # RPI_SYNC_OUT.
+        #    0b10 : pps.eq(rpi_sync_pads_i),  # RPI_SYNC_IN.
+        #    0b00 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
+        #    0b11 : pps.eq(gnss_pads.tpulse), # GNSS_TPULSE (default).
+        #})
+
+        self.comb += pps.eq(gnss_pads.tpulse)
+        self.comb += rpi_uart0_pads.rx.eq(gnss_pads.tpulse)
 
         # PPS Fake (To ease testing) ---------------------------------------------------------------
 
