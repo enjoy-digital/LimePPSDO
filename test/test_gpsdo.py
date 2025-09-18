@@ -213,14 +213,40 @@ def reset_gpsdo(driver, reset_delay=2.0):
     driver.set_enabled(True)
     print("GPSDO reset complete (re-enabled).")
 
+def enable_gpsdo(driver):
+    # Configure 1s Target and Tolerance.
+    driver.write_register(REG_PPS_1S_TARGET_L, 0xC000)
+    driver.write_register(REG_PPS_1S_TARGET_H, 0x01D4)
+    driver.write_register(REG_PPS_1S_ERR_TOL,  0x0003)
+
+    # Configure 10s Target and Tolerance.
+    driver.write_register(REG_PPS_10S_TARGET_L, 0x8000)
+    driver.write_register(REG_PPS_10S_TARGET_H, 0x124F)
+    driver.write_register(REG_PPS_10S_ERR_TOL,  0x0022)
+
+    # Configure 100s Target and Tolerance.
+    driver.write_register(REG_PPS_100S_TARGET_L, 0x0000)
+    driver.write_register(REG_PPS_100S_TARGET_H, 0xB71B)
+    driver.write_register(REG_PPS_100S_ERR_TOL,  0x0164)
+
+    # Enable.
+    driver.write_register(REG_CONTROL, 0x0001)
+    print("GPSDO enabled.")
+
+def disable_gpsdo(driver):
+    # Disable.
+    driver.write_register(REG_CONTROL, 0x0000)
+    print("GPSDO disabled.")
+
 # Main ----------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="GPSDO Test Script")
-    group  = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--check", action="store_true", help="Run monitoring mode")
-    group.add_argument("--dump",  action="store_true", help="Dump registers")
-    group.add_argument("--reset", action="store_true", help="Reset GPSDO")
+    parser.add_argument("--check",       action="store_true", help="Run monitoring mode")
+    parser.add_argument("--dump",        action="store_true", help="Dump registers")
+    parser.add_argument("--reset",       action="store_true", help="Reset GPSDO")
+    parser.add_argument("--enable",      action="store_true", help="Configure and enable GPSDO")
+    parser.add_argument("--disable",     action="store_true", help="Disable GPSDO")
     parser.add_argument("--num",         default=0,    type=int,   help="Number of iterations (for --check: 0 for infinite; for --dump: default 1 if not specified)")
     parser.add_argument("--delay",       default=1.0,  type=float, help="Delay between iterations (seconds, for --check and --dump)")
     parser.add_argument("--banner",      default=10,   type=int,   help="Banner repeat interval (for --check)")
@@ -229,13 +255,27 @@ def main():
 
     driver = GPSDODriver()
     try:
-        if args.check:
-            run_monitoring(driver, num_dumps=args.num, delay=args.delay, banner_interval=args.banner)
-        elif args.dump:
+
+        # Dump.
+        if args.dump:
             num_dumps = args.num if args.num > 0 else 1
             dump_registers(driver, num_dumps=num_dumps, delay=args.delay)
-        elif args.reset:
+
+        # Enable.
+        if args.enable:
+            enable_gpsdo(driver)
+
+        # Disable.
+        if args.disable:
+            disable_gpsdo(driver)
+
+        # Reset.
+        if args.reset:
             reset_gpsdo(driver, reset_delay=args.reset_delay)
+
+        # Check.
+        if args.check:
+            run_monitoring(driver, num_dumps=args.num, delay=args.delay, banner_interval=args.banner)
     finally:
         driver.close()
 
