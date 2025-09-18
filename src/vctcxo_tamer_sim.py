@@ -60,8 +60,7 @@ class SimSoC(SoCCore):
         # SoCCore ----------------------------------------------------------------------------------
 
         SoCCore.__init__(self, platform, sys_clk_freq,
-            cpu_type            = "vexriscv",
-            integrated_rom_size = 0x10_0000,
+            cpu_type            = None,
             uart_name           = "sim",
         )
 
@@ -101,10 +100,11 @@ class SimSoC(SoCCore):
 
         # Instance.
         # ---------
+        tune_ref = Signal()
         self.specials += Instance("vctcxo_tamer",
             # Clk/PPS Inputs.
             i_vctcxo_clock       = ClockSignal("sys"),
-            i_tune_ref           = 0,
+            i_tune_ref           = tune_ref,
 
             # Wishbone Interface.
             i_wb_clk_i           = ClockSignal("sys"),
@@ -120,11 +120,11 @@ class SimSoC(SoCCore):
 
             # Configuration Inputs.
             i_PPS_1S_TARGET      = gpsdo_1s_target,
-            i_PPS_1S_ERROR_TOL   = Cat(Signal(16, reset=0), gpsdo_1s_tol),
+            i_PPS_1S_ERROR_TOL   = gpsdo_1s_tol,
             i_PPS_10S_TARGET     = gpsdo_10s_target,
-            i_PPS_10S_ERROR_TOL  = Cat(Signal(16, reset=0), gpsdo_10s_tol),
+            i_PPS_10S_ERROR_TOL  = gpsdo_10s_tol,
             i_PPS_100S_TARGET    = gpsdo_100s_target,
-            i_PPS_100S_ERROR_TOL = Cat(Signal(16, reset=0), gpsdo_100s_tol),
+            i_PPS_100S_ERROR_TOL = gpsdo_100s_tol,
 
             # Status Output.
             o_pps_1s_error       = gpsdo_1s_error,
@@ -150,63 +150,132 @@ class SimSoC(SoCCore):
             ]
         )
 
-        # VCTCXO Access Test -----------------------------------------------------------------------
+        # Set reasonable values for the GPSDO signals
+        self.comb += [
+            gpsdo_1s_target.eq(int(1e6)),
+            gpsdo_1s_tol.eq(10),
+            gpsdo_10s_target.eq(int(10e6)),
+            gpsdo_10s_tol.eq(100),
+            gpsdo_100s_target.eq(int(100e6)),
+            gpsdo_100s_tol.eq(1000),
+        ]
 
-        if 0:
-            self.fsm = fsm = FSM(reset_state="IDLE")
+        # PPS signal generator for simulation
+        pps_counter = Signal(32)
+        self.sync += [
+            If(pps_counter == int(1e6) - 1 + 100, # +100 to trigger IRQ.
+                pps_counter.eq(0),
+                tune_ref.eq(1)
+            ).Else(
+                pps_counter.eq(pps_counter + 1),
+                tune_ref.eq(0)
+            )
+        ]
 
-            readback_value_lsb = Signal(8)
-            readback_value_msb = Signal(8)
+        # FSM for configuring the VCTCXO tamer through Wishbone access
+        # Register addresses from vctcxo_tamer.h
+        vt_ctrl_addr            = 0x00
+        vt_state_addr           = 0x1C
+        vt_dac_tunned_val_addr0 = 0x20
+        vt_dac_tunned_val_addr1 = 0x21
 
-            fsm.act("IDLE",
-                NextState("WRITE-TEST-0")
-            )
-            fsm.act("WRITE-TEST-0",
-                vctcxo_tamer_bus.cyc.eq(1),
-                vctcxo_tamer_bus.stb.eq(1),
-                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x20),
-                vctcxo_tamer_bus.we.eq(1),
-                vctcxo_tamer_bus.dat_w.eq(0x34),
-                If(vctcxo_tamer_bus.ack,
-                    NextState("WRITE-TEST-1")
-                )
-            )
-            fsm.act("WRITE-TEST-1",
-                vctcxo_tamer_bus.cyc.eq(1),
-                vctcxo_tamer_bus.stb.eq(1),
-                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x21),
-                vctcxo_tamer_bus.we.eq(1),
-                vctcxo_tamer_bus.dat_w.eq(0x12),
-                If(vctcxo_tamer_bus.ack,
-                    NextState("READ-TEST-0")
-                )
-            )
-            fsm.act("READ-TEST-0",
-                vctcxo_tamer_bus.cyc.eq(1),
-                vctcxo_tamer_bus.stb.eq(1),
-                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x20),
-                vctcxo_tamer_bus.we.eq(0),
-                If(vctcxo_tamer_bus.ack,
-                    NextValue(readback_value_lsb, vctcxo_tamer_bus.dat_r),
-                    NextState("READ-TEST-1")
-                )
-            )
-            fsm.act("READ-TEST-1",
-                vctcxo_tamer_bus.cyc.eq(1),
-                vctcxo_tamer_bus.stb.eq(1),
-                vctcxo_tamer_bus.adr.eq(0x2000_0000//4 + 0x21),
-                vctcxo_tamer_bus.we.eq(0),
-                If(vctcxo_tamer_bus.ack,
-                    NextValue(readback_value_msb, vctcxo_tamer_bus.dat_r),
-                    NextState("IDLE")
-                )
-            )
+        # Control bits
+        vt_ctrl_reset     = 0x01
+        vt_ctrl_irq_en    = 0x10
+        vt_ctrl_tune_mode = 0x40  # Value for 1_PPS mode
 
-#        # Sim Finish -------------------------------------------------------------------------------
-#        cycles = Signal(32)
-#        self.sync += cycles.eq(cycles + 1)
-#        self.sync += If(cycles == 10000, Finish())
+        base_adr = 0x2000_0000 // 4
 
+        self.fsm = fsm = FSM(reset_state="IDLE")
+
+        fsm.act("IDLE",
+            NextState("WRITE_STATE_0")
+        )
+
+        fsm.act("WRITE_STATE_0",
+            vctcxo_tamer_bus.cyc.eq(1),
+            vctcxo_tamer_bus.stb.eq(1),
+            vctcxo_tamer_bus.adr.eq(base_adr + vt_state_addr),
+            vctcxo_tamer_bus.we.eq(1),
+            vctcxo_tamer_bus.dat_w.eq(0x00),
+            If(vctcxo_tamer_bus.ack,
+                NextState("WRITE_CTRL_NO_ISR")
+            )
+        )
+
+        fsm.act("WRITE_CTRL_NO_ISR",
+            vctcxo_tamer_bus.cyc.eq(1),
+            vctcxo_tamer_bus.stb.eq(1),
+            vctcxo_tamer_bus.adr.eq(base_adr + vt_ctrl_addr),
+            vctcxo_tamer_bus.we.eq(1),
+            vctcxo_tamer_bus.dat_w.eq(vt_ctrl_tune_mode),  # 0x40: tune mode 1, no reset, no IRQ en
+            If(vctcxo_tamer_bus.ack,
+                NextState("WRITE_RESET_TRUE")
+            )
+        )
+
+        fsm.act("WRITE_RESET_TRUE",
+            vctcxo_tamer_bus.cyc.eq(1),
+            vctcxo_tamer_bus.stb.eq(1),
+            vctcxo_tamer_bus.adr.eq(base_adr + vt_ctrl_addr),
+            vctcxo_tamer_bus.we.eq(1),
+            vctcxo_tamer_bus.dat_w.eq(vt_ctrl_tune_mode | vt_ctrl_reset),  # 0x41
+            If(vctcxo_tamer_bus.ack,
+                NextState("WRITE_RESET_FALSE")
+            )
+        )
+
+        fsm.act("WRITE_RESET_FALSE",
+            vctcxo_tamer_bus.cyc.eq(1),
+            vctcxo_tamer_bus.stb.eq(1),
+            vctcxo_tamer_bus.adr.eq(base_adr + vt_ctrl_addr),
+            vctcxo_tamer_bus.we.eq(1),
+            vctcxo_tamer_bus.dat_w.eq(vt_ctrl_tune_mode),  # 0x40
+            If(vctcxo_tamer_bus.ack,
+                NextState("WRITE_ISR_EN")
+            )
+        )
+
+        fsm.act("WRITE_ISR_EN",
+            vctcxo_tamer_bus.cyc.eq(1),
+            vctcxo_tamer_bus.stb.eq(1),
+            vctcxo_tamer_bus.adr.eq(base_adr + vt_ctrl_addr),
+            vctcxo_tamer_bus.we.eq(1),
+            vctcxo_tamer_bus.dat_w.eq(vt_ctrl_tune_mode | vt_ctrl_irq_en),  # 0x50
+            If(vctcxo_tamer_bus.ack,
+                NextState("WRITE_DAC_LSB")
+            )
+        )
+
+        fsm.act("WRITE_DAC_LSB",
+            vctcxo_tamer_bus.cyc.eq(1),
+            vctcxo_tamer_bus.stb.eq(1),
+            vctcxo_tamer_bus.adr.eq(base_adr + vt_dac_tunned_val_addr0),
+            vctcxo_tamer_bus.we.eq(1),
+            vctcxo_tamer_bus.dat_w.eq(0x00),
+            If(vctcxo_tamer_bus.ack,
+                NextState("WRITE_DAC_MSB")
+            )
+        )
+
+        fsm.act("WRITE_DAC_MSB",
+            vctcxo_tamer_bus.cyc.eq(1),
+            vctcxo_tamer_bus.stb.eq(1),
+            vctcxo_tamer_bus.adr.eq(base_adr + vt_dac_tunned_val_addr1),
+            vctcxo_tamer_bus.we.eq(1),
+            vctcxo_tamer_bus.dat_w.eq(0x00),
+            If(vctcxo_tamer_bus.ack,
+                NextState("DONE")
+            )
+        )
+        fsm.act("DONE",
+            NextState("DONE")
+        )
+
+        # Sim Finish -------------------------------------------------------------------------------
+        cycles = Signal(32)
+        self.sync += cycles.eq(cycles + 1)
+        self.sync += If(cycles == int(3e6), Finish())
 
 # Build --------------------------------------------------------------------------------------------
 
