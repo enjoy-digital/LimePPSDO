@@ -254,10 +254,10 @@ class BaseSoC(SoCCore):
             top_entity     = "gpsdocfg",
             flatten_source = False,
             files          = [
-                "hdl/spi/revisions.vhd",
-                "hdl/spi/gpsdocfg.vhd",
-                "hdl/spi/mcfg32wm_fsm.vhd",
-                "hdl/spi/mem_package.vhd",
+                "hdl/gpsdocfg/revisions.vhd",
+                "hdl/gpsdocfg/gpsdocfg.vhd",
+                "hdl/gpsdocfg/mcfg32wm_fsm.vhd",
+                "hdl/gpsdocfg/mem_package.vhd",
             ]
         )
         self.vhd2v_converter_gpsdocfg._ghdl_opts.append("-fsynopsys")
