@@ -141,12 +141,12 @@ class SimSoC(SoCCore):
             top_entity     = "vctcxo_tamer",
             flatten_source = False,
             files          = [
-                "hdl/vctcxo_tamer/edge_detector.vhd",
-                "hdl/vctcxo_tamer/handshake.vhd",
-                "hdl/vctcxo_tamer/pps_counter.vhd",
-                "hdl/vctcxo_tamer/reset_synchronizer.vhd",
-                "hdl/vctcxo_tamer/synchronizer.vhd",
-                "hdl/vctcxo_tamer/vctcxo_tamer.vhd",
+                "hdl/vctcxo_tamer/src/edge_detector.vhd",
+                "hdl/vctcxo_tamer/src/handshake.vhd",
+                "hdl/vctcxo_tamer/src/pps_counter.vhd",
+                "hdl/vctcxo_tamer/src/reset_synchronizer.vhd",
+                "hdl/vctcxo_tamer/src/synchronizer.vhd",
+                "hdl/vctcxo_tamer/src/vctcxo_tamer.vhd",
             ]
         )
 
