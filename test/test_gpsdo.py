@@ -12,6 +12,7 @@
 import time
 import spidev
 import argparse
+import math
 
 # Constants ----------------------------------------------------------------------------------------
 
@@ -46,6 +47,8 @@ STATUS_TPULSE_SIZE     = 1
 # Control bit fields
 CONTROL_EN_OFFSET      = 0
 CONTROL_EN_SIZE        = 1
+CONTROL_CLK_SEL_OFFSET = 1
+CONTROL_CLK_SEL_SIZE   = 1
 
 # Helper function to get a field from a register value.
 def get_field(reg_value, offset, size):
@@ -213,25 +216,44 @@ def reset_gpsdo(driver, reset_delay=2.0):
     driver.set_enabled(True)
     print("GPSDO reset complete (re-enabled).")
 
-def enable_gpsdo(driver):
+def enable_gpsdo(driver, clk_freq_mhz=30.72, ppm=0.1):
+    freq = clk_freq_mhz * 1e6
+
+    # Compute targets (expected counter values for intervals).
+    target_1s   = int(freq)
+    target_10s  = int(10 * freq)
+    target_100s = int(100 * freq)
+
+    # Compute tolerances in Hz for constant ppm across intervals.
+    tol_1s_hz   = round(freq * ppm / 1e6)
+    tol_10s_hz  = tol_1s_hz * 10
+    tol_100s_hz = tol_1s_hz * 100
+
     # Configure 1s Target and Tolerance.
-    driver.write_register(REG_PPS_1S_TARGET_L, 0xC000)
-    driver.write_register(REG_PPS_1S_TARGET_H, 0x01D4)
-    driver.write_register(REG_PPS_1S_ERR_TOL,  0x0003)
+    driver.write_register(REG_PPS_1S_TARGET_L, target_1s & 0xFFFF)
+    driver.write_register(REG_PPS_1S_TARGET_H, target_1s >> 16)
+    driver.write_register(REG_PPS_1S_ERR_TOL, tol_1s_hz)
 
     # Configure 10s Target and Tolerance.
-    driver.write_register(REG_PPS_10S_TARGET_L, 0x8000)
-    driver.write_register(REG_PPS_10S_TARGET_H, 0x124F)
-    driver.write_register(REG_PPS_10S_ERR_TOL,  0x0022)
+    driver.write_register(REG_PPS_10S_TARGET_L, target_10s & 0xFFFF)
+    driver.write_register(REG_PPS_10S_TARGET_H, target_10s >> 16)
+    driver.write_register(REG_PPS_10S_ERR_TOL, tol_10s_hz)
 
     # Configure 100s Target and Tolerance.
-    driver.write_register(REG_PPS_100S_TARGET_L, 0x0000)
-    driver.write_register(REG_PPS_100S_TARGET_H, 0xB71B)
-    driver.write_register(REG_PPS_100S_ERR_TOL,  0x0164)
+    driver.write_register(REG_PPS_100S_TARGET_L, target_100s & 0xFFFF)
+    driver.write_register(REG_PPS_100S_TARGET_H, target_100s >> 16)
+    driver.write_register(REG_PPS_100S_ERR_TOL, tol_100s_hz)
 
-    # Enable.
-    driver.write_register(REG_CONTROL, 0x0001)
-    print("GPSDO enabled.")
+    # Set CLK_SEL (0: 30.72MHz LMKRF, 1: 10MHz LMK10).
+    clk_sel = 1 if math.isclose(clk_freq_mhz, 10.0) else 0
+
+    # Enable (EN=1).
+    control = set_field(0, CONTROL_CLK_SEL_OFFSET, CONTROL_CLK_SEL_SIZE, clk_sel)
+    control = set_field(control, CONTROL_EN_OFFSET, CONTROL_EN_SIZE, 1)
+    driver.write_register(REG_CONTROL, control)
+
+    print(f"GPSDO enabled: CLK_SEL={clk_sel} ({clk_freq_mhz}MHz), {ppm}ppm tolerance "
+          f"(1s tol={tol_1s_hz}Hz, 10s={tol_10s_hz}Hz, 100s={tol_100s_hz}Hz).")
 
 def disable_gpsdo(driver):
     # Disable.
@@ -242,15 +264,17 @@ def disable_gpsdo(driver):
 
 def main():
     parser = argparse.ArgumentParser(description="GPSDO Test Script")
-    parser.add_argument("--check",       action="store_true", help="Run monitoring mode")
-    parser.add_argument("--dump",        action="store_true", help="Dump registers")
-    parser.add_argument("--reset",       action="store_true", help="Reset GPSDO")
-    parser.add_argument("--enable",      action="store_true", help="Configure and enable GPSDO")
-    parser.add_argument("--disable",     action="store_true", help="Disable GPSDO")
-    parser.add_argument("--num",         default=0,    type=int,   help="Number of iterations (for --check: 0 for infinite; for --dump: default 1 if not specified)")
-    parser.add_argument("--delay",       default=1.0,  type=float, help="Delay between iterations (seconds, for --check and --dump)")
-    parser.add_argument("--banner",      default=10,   type=int,   help="Banner repeat interval (for --check)")
-    parser.add_argument("--reset-delay", default=2.0,  type=float, help="Delay after disable before re-enable (seconds, for --reset)")
+    parser.add_argument("--check",       action="store_true",       help="Run monitoring mode")
+    parser.add_argument("--dump",        action="store_true",       help="Dump registers")
+    parser.add_argument("--reset",       action="store_true",       help="Reset GPSDO")
+    parser.add_argument("--enable",      action="store_true",       help="Configure and enable GPSDO")
+    parser.add_argument("--disable",     action="store_true",       help="Disable GPSDO")
+    parser.add_argument("--num",         default=0,     type=int,   help="Number of iterations (for --check: 0 for infinite; for --dump: default 1 if not specified)")
+    parser.add_argument("--delay",       default=1.0,   type=float, help="Delay between iterations (seconds, for --check and --dump)")
+    parser.add_argument("--banner",      default=10,    type=int,   help="Banner repeat interval (for --check)")
+    parser.add_argument("--reset-delay", default=2.0,   type=float, help="Delay after disable before re-enable (seconds, for --reset)")
+    parser.add_argument("--clk-freq",    default=30.72, type=float, help="Clock frequency in MHz (10 or 30.72)")
+    parser.add_argument("--ppm",         default=0.1,   type=float, help="Tolerance in ppm")
     args = parser.parse_args()
 
     driver = GPSDODriver()
@@ -263,7 +287,7 @@ def main():
 
         # Enable.
         if args.enable:
-            enable_gpsdo(driver)
+            enable_gpsdo(driver, clk_freq_mhz=args.clk_freq, ppm=args.ppm)
 
         # Disable.
         if args.disable:
