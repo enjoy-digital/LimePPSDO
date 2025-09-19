@@ -206,6 +206,7 @@ class BaseSoC(SoCCore):
             0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
             0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
         })
+        platform.add_period_constraint(self.crg.cd_vctcxo.clk, 1e9/30.72e6)
 
         # PPS Selection ----------------------------------------------------------------------------
 
