@@ -110,7 +110,7 @@ void vctcxo_tamer_set_tune_mode(vctcxo_tamer_mode mode);
 
 int32_t vctcxo_tamer_read_count(uint8_t addr);
 
-void vctcxo_trim_dac_write(uint8_t cmd, uint16_t val);
+void vctcxo_trim_dac_write(uint16_t val);
 
 void vctcxo_tamer_isr(void *context);
 

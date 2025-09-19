@@ -77,7 +77,7 @@ static void adjust_trim_dac(int32_t error, float slope, int scale) {
         (uint16_t)(lroundf((float)error * slope) / scale));
 
     /* Write value to VCTCXO Tamer. */
-    vctcxo_trim_dac_write(0x08, vctcxo_trim_dac_value);
+    vctcxo_trim_dac_write(vctcxo_trim_dac_value);
 
     /* Write value to DAC. */
     vctcxo_dac_set(0x0, vctcxo_trim_dac_value);
@@ -116,8 +116,8 @@ int main(void)
     uint8_t vctcxo_tamer_en_old = 0;
 
     /* Set Default VCTCXO/DAC value. */
-    vctcxo_trim_dac_write(0x08, VCTCXO_DEFAULT_DAC_VALUE);
-    vctcxo_dac_set(0x0,         VCTCXO_DEFAULT_DAC_VALUE);
+    vctcxo_trim_dac_write(VCTCXO_DEFAULT_DAC_VALUE);
+    vctcxo_dac_set(0x0,   VCTCXO_DEFAULT_DAC_VALUE);
 
     /* ---------- */
     /*  Main Loop */
@@ -166,8 +166,8 @@ int main(void)
                 puts("\nCOARSE_TUNE_MIN\n");
 #endif
                 /* Set trim DAC to minimum value. */
-                vctcxo_trim_dac_write(0x08, trimdac_min);
-                vctcxo_dac_set(0x0, trimdac_min);
+                vctcxo_trim_dac_write(trimdac_min);
+                vctcxo_dac_set(0x0,   trimdac_min);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_MAX;
@@ -186,8 +186,8 @@ int main(void)
                 trimdac_cal_line.point[0].x = vctcxo_tamer_pkt.pps_1s_error;
 
                 /* Set DAC to maximum value. */
-                vctcxo_trim_dac_write(0x08, trimdac_max);
-                vctcxo_dac_set(0x0, trimdac_max);
+                vctcxo_trim_dac_write(trimdac_max);
+                vctcxo_dac_set(0x0,   trimdac_max);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_DONE;
@@ -227,8 +227,8 @@ int main(void)
                 }
 
                 /* Set the trim DAC count to the y-intercept. */
-                vctcxo_trim_dac_write(0x08, trimdac_cal_line.y_intercept);
-                vctcxo_dac_set(0x0, trimdac_cal_line.y_intercept);
+                vctcxo_trim_dac_write(trimdac_cal_line.y_intercept);
+                vctcxo_dac_set(0x0,   trimdac_cal_line.y_intercept);
 
                 /* Set next interrupt state. */
                 tune_state = FINE_TUNE;

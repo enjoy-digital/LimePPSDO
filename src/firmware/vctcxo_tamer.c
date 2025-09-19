@@ -92,11 +92,11 @@ void vctcxo_tamer_set_tune_mode(vctcxo_tamer_mode mode) {
     vctcxo_tamer_write(VT_CTRL_ADDR, vctcxo_tamer_ctrl_reg);
 
     /* Reset the counters. */
-    vctcxo_tamer_reset_counters( true );
+    vctcxo_tamer_reset_counters(true);
 
     /* Take counters out of reset if tuning mode is not DISABLED. */
     if( mode != 0x00 ) {
-        vctcxo_tamer_reset_counters( false );
+        vctcxo_tamer_reset_counters(false);
     }
 
     switch (mode) {
@@ -116,10 +116,10 @@ void vctcxo_tamer_set_tune_mode(vctcxo_tamer_mode mode) {
 /* Reads a 32-bit count from VCTCXO Tamer registers. */
 int32_t vctcxo_tamer_read_count(uint8_t addr) {
     uint8_t offset = addr;
-    int32_t value = 0;
+    int32_t value;
 
-    value  = (int32_t)vctcxo_tamer_read((uint32_t) offset++);
-    value |= (int32_t)(vctcxo_tamer_read((uint32_t) offset++)) << 8;
+    value |= (int32_t)(vctcxo_tamer_read((uint32_t) offset++)) <<  0;
+    value |= (int32_t)(vctcxo_tamer_read((uint32_t) offset++)) <<  8;
     value |= (int32_t)(vctcxo_tamer_read((uint32_t) offset++)) << 16;
     value |= (int32_t)(vctcxo_tamer_read((uint32_t) offset++)) << 24;
 
@@ -127,12 +127,12 @@ int32_t vctcxo_tamer_read_count(uint8_t addr) {
 }
 
 /* Writes the trim DAC value to VCTCXO Tamer registers. */
-void vctcxo_trim_dac_write(uint8_t cmd, uint16_t val)
+void vctcxo_trim_dac_write(uint16_t val)
 {
     uint8_t tuned_val_lsb;
     uint8_t tuned_val_msb;
 
-    tuned_val_lsb = (uint8_t) (val & 0x00FF);
+    tuned_val_lsb = (uint8_t) ((val & 0x00FF) >> 0);
     tuned_val_msb = (uint8_t) ((val & 0xFF00) >> 8);
 
     /* Write tuned val to VCTCXO Tamer registers. */
@@ -146,10 +146,10 @@ void vctcxo_tamer_isr(void *context) {
     uint8_t error_status = 0x00;
 
     /* Disable interrupts. */
-    vctcxo_tamer_enable_isr( false );
+    vctcxo_tamer_enable_isr(false);
 
     /* Reset (stop) the PPS counters. */
-    vctcxo_tamer_reset_counters( true );
+    vctcxo_tamer_reset_counters(true);
 
     /* Read the current count values. */
     pkt->pps_1s_error   = vctcxo_tamer_read_count(VT_ERR_1S_ADDR);
