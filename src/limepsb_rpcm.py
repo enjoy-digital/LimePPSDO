@@ -89,7 +89,8 @@ class BaseSoC(SoCCore):
         kwargs["cpu_type"]             = "serv"
         kwargs["with_timer"]           = False
         kwargs["with_ctrl"]            = False
-        kwargs["integrated_sram_size"] = 0x40
+        kwargs["integrated_sram_size"] = 0x100
+        kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = firmware_path
 
         SoCCore.__init__(self, platform, sys_clk_freq, ident="LimePSB-RPCM GPSDO SoC.", **kwargs)
