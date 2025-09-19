@@ -152,9 +152,9 @@ class BaseSoC(SoCCore):
 
         class Mailbox(LiteXModule):
             def __init__(self, soc):
-                self.irq              = Signal() # FIXME: Rename.
-                self.gpsdo_en         = CSRStatus()
-                self.vctcxo_tamer_irq = CSRStatus()
+                self.gpsdo_en            = CSRStatus()
+                self.vctcxo_tamer_irq_in = Signal()
+                self.vctcxo_tamer_irq    = CSRStatus()
 
                 # # #
 
@@ -162,9 +162,9 @@ class BaseSoC(SoCCore):
 
                 self.sync += [
                     If(self.vctcxo_tamer_irq.we,
-                        self.vctcxo_tamer_irq.status.eq(self.irq)
+                        self.vctcxo_tamer_irq.status.eq(self.vctcxo_tamer_irq_in)
                     ).Else(
-                        self.vctcxo_tamer_irq.status.eq(self.irq | self.vctcxo_tamer_irq.status)
+                        self.vctcxo_tamer_irq.status.eq(self.vctcxo_tamer_irq_in | self.vctcxo_tamer_irq.status)
                     )
                 ]
 
@@ -287,7 +287,7 @@ class BaseSoC(SoCCore):
         self.bus.add_slave("vctcxo_tamer", self.vctcxo_tamer.bus, region=SoCRegion(size=0x1000))
         self.comb += [
             # IRQ.
-            self.mailbox.irq.eq(self.vctcxo_tamer.irq),
+            self.mailbox.vctcxo_tamer_irq_in.eq(self.vctcxo_tamer.irq),
 
             # Config.
             self.vctcxo_tamer.config_1s_target  .eq(self.gpsdocfg.config_1s_target),
