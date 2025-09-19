@@ -198,6 +198,7 @@ class BaseSoC(SoCCore):
 
         # Led --------------------------------------------------------------------------------------
 
+        # Blinks on GNSS TPULSE when enabled; off when disabled (active low).
         self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & self.gpsdocfg.config_en))
 
         # VCTCXO Clk Selection ---------------------------------------------------------------------
@@ -220,9 +221,9 @@ class BaseSoC(SoCCore):
         ]
 
         self.comb += Case(self.gpsdocfg.config_tpulse_sel, {
-            0b01      : pps.eq(rpi_sync_pads_o_resync),  # RPI_SYNC_OUT.
-            0b10      : pps.eq(rpi_sync_pads_i_resync),  # RPI_SYNC_IN.
-            "default" : pps.eq(gnss_pads_tpulse_resync), # GNSS_TPULSE (default).
+            0b01      : pps.eq(rpi_sync_pads_o_resync),  # Rpi_Sync Out.
+            0b10      : pps.eq(rpi_sync_pads_i_resync),  # Rpi_Sync In.
+            "default" : pps.eq(gnss_pads_tpulse_resync), # GNSS TPULSE (default).
         })
 
         # PPS Detector -----------------------------------------------------------------------------
@@ -240,28 +241,37 @@ class BaseSoC(SoCCore):
 
         # SPI Sharing Logic.
         # ------------------
-        self.comb += [
-            # SPI0 controlled by Rpi.
-            If(self.gpsdocfg.config_en == 0b0,
+        self.comb += Case(self.gpsdocfg.config_en, {
+            # When disabled (EN=0): RPI controls FPGA SPI0 (sclk/mosi from RPI SPI1, dac_ss=ss2) for
+            # direct DAC access.
+             0b0 : [
                 fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
                 fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
-            ),
+             ],
 
-            # SPI0 controlled by CPU.
-            If(self.gpsdocfg.config_en == 0b1,
+             # When enabled (EN=1): CPU overrides via dedicated SPI master; DAC inaccessible from
+             # RPI/CM4/CM5.
+             0b1 : [
                 fpga_spi0_pads.sclk.eq(spi_pads.clk),
                 fpga_spi0_pads.mosi.eq(spi_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
-            ),
-        ]
+             ]
+        })
 
         # Sync In / Out ----------------------------------------------------------------------------
 
-        # FPGA_SYNC_OUT.
+        # FPGA Sync Out.
+        # --------------
+
+        # 10MHz clock output to external sync (e.g., LMK/FPGA chaining).
         self.comb += fpga_sync_out_pads.eq(ClockSignal("clk10"))
 
-        # RPI_SYNC_IN.
+        # Rpi Sync In.
+        # ------------
+
+        # Bidirectional: Input mode (dir=0) or GNSS TPULSE passthrough output (dir=1); overrides to
+        # input if TPULSE_SEL=10.
         self.specials += SDRTristate(
             io  = rpi_sync_pads.i,
             i   = rpi_sync_pads_i,
