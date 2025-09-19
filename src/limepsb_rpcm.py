@@ -89,11 +89,10 @@ class BaseSoC(SoCCore):
         kwargs["cpu_type"]             = "serv"
         kwargs["with_timer"]           = False
         kwargs["with_ctrl"]            = False
-        kwargs["integrated_sram_size"] = 0x100
-        kwargs["integrated_rom_size"]  = 0x2000
+        kwargs["integrated_sram_size"] = 0x40
         kwargs["integrated_rom_init"]  = firmware_path
 
-        SoCCore.__init__(self, platform, sys_clk_freq, ident="LimePSB-RPCM GPSDO SoC", **kwargs)
+        SoCCore.__init__(self, platform, sys_clk_freq, ident="LimePSB-RPCM GPSDO SoC.", **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
 
@@ -102,14 +101,14 @@ class BaseSoC(SoCCore):
         # Signals ----------------------------------------------------------------------------------
 
         # PPS.
-        pps                   = Signal()
-        pps_active            = Signal()
+        pps              = Signal()
+        pps_active       = Signal()
 
-        # RPi.
-        rpi_sync_pads_i       = Signal()
+        # Rpi.
+        rpi_sync_pads_i  = Signal()
 
         # VCXO Tamer.
-        vctcxo_tamer_irq      = Signal()
+        vctcxo_tamer_irq = Signal()
 
         # Pads -------------------------------------------------------------------------------------
 
@@ -197,6 +196,17 @@ class BaseSoC(SoCCore):
             gnss_pads.uart_rx.eq(rpi_uart0_pads.tx),
         ]
 
+        # Led --------------------------------------------------------------------------------------
+
+        self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & self.gpsdocfg.config_en))
+
+        # VCTCXO Clk Selection ---------------------------------------------------------------------
+
+        self.comb += Case(self.gpsdocfg.config_clk_sel, {
+            0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
+            0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
+        })
+
         # PPS Selection ----------------------------------------------------------------------------
 
         rpi_sync_pads_o_resync  = Signal()
@@ -220,17 +230,6 @@ class BaseSoC(SoCCore):
         self.pps_detector.add_sources()
         self.comb += self.gpsdocfg.status_pps_active.eq(self.pps_detector.pps_active)
 
-        # Led --------------------------------------------------------------------------------------
-
-        self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & self.gpsdocfg.config_en))
-
-        # VCTCXO Clk Selection ---------------------------------------------------------------------
-
-        self.comb += Case(self.gpsdocfg.config_clk_sel, {
-            0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
-            0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
-        })
-
         # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
 
         # SPI Master (AD5662 DAC).
@@ -241,14 +240,14 @@ class BaseSoC(SoCCore):
         # SPI Sharing Logic.
         # ------------------
         self.comb += [
-            # SPI0 controlled from Rpi.
+            # SPI0 controlled by Rpi.
             If(self.gpsdocfg.config_en == 0b0,
                 fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
                 fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
             ),
 
-            # SPI0 controlled from CPU.
+            # SPI0 controlled by CPU.
             If(self.gpsdocfg.config_en == 0b1,
                 fpga_spi0_pads.sclk.eq(spi_pads.clk),
                 fpga_spi0_pads.mosi.eq(spi_pads.mosi),
@@ -280,27 +279,27 @@ class BaseSoC(SoCCore):
             self.mailbox.irq.eq(self.vctcxo_tamer.irq),
 
             # Config.
-            self.vctcxo_tamer.config_1s_target  .eq(self.gpsdocfg.config_1s_target  ),
-            self.vctcxo_tamer.config_1s_tol     .eq(self.gpsdocfg.config_1s_tol     ),
-            self.vctcxo_tamer.config_10s_target .eq(self.gpsdocfg.config_10s_target ),
-            self.vctcxo_tamer.config_10s_tol    .eq(self.gpsdocfg.config_10s_tol    ),
+            self.vctcxo_tamer.config_1s_target  .eq(self.gpsdocfg.config_1s_target),
+            self.vctcxo_tamer.config_1s_tol     .eq(self.gpsdocfg.config_1s_tol),
+            self.vctcxo_tamer.config_10s_target .eq(self.gpsdocfg.config_10s_target),
+            self.vctcxo_tamer.config_10s_tol    .eq(self.gpsdocfg.config_10s_tol),
             self.vctcxo_tamer.config_100s_target.eq(self.gpsdocfg.config_100s_target),
-            self.vctcxo_tamer.config_100s_tol   .eq(self.gpsdocfg.config_100s_tol   ),
+            self.vctcxo_tamer.config_100s_tol   .eq(self.gpsdocfg.config_100s_tol),
 
             # Status.
-            self.gpsdocfg.status_1s_error      .eq(self.vctcxo_tamer.status_1s_error     ),
-            self.gpsdocfg.status_10s_error     .eq(self.vctcxo_tamer.status_10s_error    ),
-            self.gpsdocfg.status_100s_error    .eq(self.vctcxo_tamer.status_100s_error   ),
+            self.gpsdocfg.status_1s_error      .eq(self.vctcxo_tamer.status_1s_error),
+            self.gpsdocfg.status_10s_error     .eq(self.vctcxo_tamer.status_10s_error),
+            self.gpsdocfg.status_100s_error    .eq(self.vctcxo_tamer.status_100s_error),
             self.gpsdocfg.status_dac_tuned_val .eq(self.vctcxo_tamer.status_dac_tuned_val),
-            self.gpsdocfg.status_accuracy      .eq(self.vctcxo_tamer.status_accuracy     ),
-            self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state        ),
+            self.gpsdocfg.status_accuracy      .eq(self.vctcxo_tamer.status_accuracy),
+            self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state),
         ]
 
 # Build -------------------------------------------------------------------------------------------
 def main():
     from litex.build.parser import LiteXArgumentParser
     parser = LiteXArgumentParser(platform=Platform, description="LiteX SoC on LimePSB RPCM Board.")
-    parser.add_argument("--sys-clk-freq", default=6e6, help="System clock frequency (default: 10MHz)")
+    parser.add_argument("--sys-clk-freq", default=6e6, help="System clock frequency (default: 6MHz)")
     args = parser.parse_args()
 
     # SoC.

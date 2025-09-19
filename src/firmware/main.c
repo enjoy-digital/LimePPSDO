@@ -90,7 +90,7 @@ int main(void)
 {
 #ifdef VCTCXO_DEBUG
     uart_init();
-    puts("\nLimePSB-RPCM GPSDO Firmware\n");
+    puts("\nLimePSB-RPCM GPSDO Firmware.\n");
 #endif
 
     /* Trim DAC constants. */
