@@ -253,7 +253,7 @@ class BaseSoC(SoCCore):
              # When enabled (EN=1): CPU overrides via dedicated SPI master; DAC inaccessible from
              # RPI/CM4/CM5.
              0b1 : [
-                fpga_spi0_pads.sclk.eq(spi_pads.clk),
+                fpga_spi0_pads.sclk.eq(~spi_pads.clk),
                 fpga_spi0_pads.mosi.eq(spi_pads.mosi),
                 fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
              ]
