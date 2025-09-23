@@ -102,13 +102,9 @@ class BaseSoC(SoCCore):
 
         # PPS.
         pps              = Signal()
-        pps_active       = Signal()
 
         # Rpi.
         rpi_sync_pads_i  = Signal()
-
-        # VCXO Tamer.
-        vctcxo_tamer_irq = Signal()
 
         # Pads -------------------------------------------------------------------------------------
 
@@ -189,19 +185,10 @@ class BaseSoC(SoCCore):
 
         # PPS Selection ----------------------------------------------------------------------------
 
-        rpi_sync_pads_o_resync  = Signal()
-        rpi_sync_pads_i_resync  = Signal()
-        gnss_pads_tpulse_resync = Signal()
-        self.specials += [
-            MultiReg(rpi_sync_pads.o,   rpi_sync_pads_o_resync, "vctcxo"),
-            MultiReg(rpi_sync_pads_i,   rpi_sync_pads_i_resync, "vctcxo"),
-            MultiReg(gnss_pads.tpulse, gnss_pads_tpulse_resync, "vctcxo"),
-        ]
-
         self.comb += Case(self.gpsdocfg.config_tpulse_sel, {
-            0b01      : pps.eq(rpi_sync_pads_o_resync),  # Rpi_Sync Out.
-            0b10      : pps.eq(rpi_sync_pads_i_resync),  # Rpi_Sync In.
-            "default" : pps.eq(gnss_pads_tpulse_resync), # GNSS TPULSE (default).
+            0b01      : pps.eq(rpi_sync_pads.o),  # Rpi_Sync Out.
+            0b10      : pps.eq(rpi_sync_pads_i),  # Rpi_Sync In.
+            "default" : pps.eq(gnss_pads.tpulse), # GNSS TPULSE (default).
         })
 
         # PPS Detector -----------------------------------------------------------------------------
@@ -304,7 +291,7 @@ class BaseSoC(SoCCore):
                     If(self.irq.we,
                         self.irq.status.eq(irq)
                     ).Else(
-                        self.irq.status.eq(irq | (self.irq.status & self.irq.we))
+                        self.irq.status.eq(irq | self.irq.status)
                     )
                 ]
 
