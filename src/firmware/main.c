@@ -25,7 +25,7 @@
 /* Constants                                                             */
 /*-----------------------------------------------------------------------*/
 
-#define VCTCXO_DEBUG
+//#define VCTCXO_DEBUG
 
 #define VCTCXO_DEFAULT_DAC_VALUE 0x77FA
 

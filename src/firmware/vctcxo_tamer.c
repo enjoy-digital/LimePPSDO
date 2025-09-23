@@ -116,7 +116,7 @@ void vctcxo_tamer_set_tune_mode(vctcxo_tamer_mode mode) {
 /* Reads a 32-bit count from VCTCXO Tamer registers. */
 int32_t vctcxo_tamer_read_count(uint8_t addr) {
     uint8_t offset = addr;
-    int32_t value;
+    int32_t value  = 0;
 
     value |= (int32_t)(vctcxo_tamer_read((uint32_t) offset++)) <<  0;
     value |= (int32_t)(vctcxo_tamer_read((uint32_t) offset++)) <<  8;
