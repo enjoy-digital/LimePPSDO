@@ -99,10 +99,9 @@ int main(void)
         vctcxo_tamer_en_old = vctcxo_tamer_en;
         vctcxo_tamer_en     = gpsdo_control_enable_read();
 
-        /* Get VCTCXO Tamer irq status. */
-        if (gpsdo_control_irq_read()) {
+        /* Check VCTCXO Tamer Error Status. */
+        if (vctcxo_tamer_read(VT_STAT_ADDR) != 0) {
             vctcxo_tamer_isr(&vctcxo_tamer_pkt);
-            gpsdo_control_irq_read();
         }
 
         /* Enable or disable VCTCXO Tamer module depending on enable signal. */

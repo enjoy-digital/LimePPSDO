@@ -250,29 +250,17 @@ class BaseSoC(SoCCore):
             GPSDO Control Interface: CSR registers for gateware-firmware communication.
 
             - enable : Read-only mirror of GPSDO enable signal.
-            - irq    : Sticky latch for VCTCXO tamer IRQ (clear by reading when irq is low).
             """
-            def __init__(self, enable, irq):
+            def __init__(self, enable):
                 self.enable = CSRStatus()
-                self.irq    = CSRStatus()
 
                 # # #
 
                 # Mirror enable signal combinatorially.
                 self.comb += self.enable.status.eq(enable)
 
-                # Synchronous IRQ latching: set to irq on read; else OR for stickiness.
-                self.sync += [
-                    If(self.irq.we,
-                        self.irq.status.eq(irq)
-                    ).Else(
-                        self.irq.status.eq(irq | self.irq.status)
-                    )
-                ]
-
         self.gpsdo_control = GPSDOControl(
             enable = self.gpsdocfg.config_en, # GPSDO config enable.
-            irq    = self.vctcxo_tamer.irq,   # VCTCXO tamer IRQ.
         )
 
         # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
