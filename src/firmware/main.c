@@ -39,31 +39,6 @@ struct vctcxo_tamer_pkt_buf vctcxo_tamer_pkt;
 /* Helpers                                                               */
 /*-----------------------------------------------------------------------*/
 
-#define SPI_START   (1 << 0)
-#define SPI_DONE    (1 << 0)
-#define SPI_LENGTH  (1 << 8)
-
-/* Sets the VCTCXO DAC value via SPI.
- *
- * @param pd   Power-down control bits (PD1 PD0).
- * @param data 16-bit DAC value.
- */
-static void vctcxo_dac_set(uint8_t pd, uint16_t data) {
-    uint32_t word;
-
-    /* Prepare Word. */
-    word = (pd << 16) | data;
-
-    /* Write word on MOSI. */
-    spi_mosi_write(word);
-
-    /* Initiate SPI Xfer. */
-    spi_control_write(24 * SPI_LENGTH | SPI_START);
-
-    /* Wait SPI Xfer to be done. */
-    while (spi_status_read() != SPI_DONE);
-}
-
 /* Adjusts the trim DAC value based on error, slope, and scale.
  *
  * @param error The PPS error value.
@@ -78,9 +53,6 @@ static void adjust_trim_dac(int32_t error, float slope, int scale) {
 
     /* Write value to VCTCXO Tamer. */
     vctcxo_trim_dac_write(vctcxo_trim_dac_value);
-
-    /* Write value to DAC. */
-    vctcxo_dac_set(0x0, vctcxo_trim_dac_value);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -115,9 +87,8 @@ int main(void)
     uint8_t vctcxo_tamer_en     = 0;
     uint8_t vctcxo_tamer_en_old = 0;
 
-    /* Set Default VCTCXO/DAC value. */
+    /* Set Default VCTCXO DAC value. */
     vctcxo_trim_dac_write(VCTCXO_DEFAULT_DAC_VALUE);
-    vctcxo_dac_set(0x0,   VCTCXO_DEFAULT_DAC_VALUE);
 
     /* ---------- */
     /*  Main Loop */
@@ -167,7 +138,6 @@ int main(void)
 #endif
                 /* Set trim DAC to minimum value. */
                 vctcxo_trim_dac_write(trimdac_min);
-                vctcxo_dac_set(0x0,   trimdac_min);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_MAX;
@@ -187,7 +157,6 @@ int main(void)
 
                 /* Set DAC to maximum value. */
                 vctcxo_trim_dac_write(trimdac_max);
-                vctcxo_dac_set(0x0,   trimdac_max);
 
                 /* Set next interrupt state. */
                 tune_state = COARSE_TUNE_DONE;
@@ -228,7 +197,6 @@ int main(void)
 
                 /* Set the trim DAC count to the y-intercept. */
                 vctcxo_trim_dac_write(trimdac_cal_line.y_intercept);
-                vctcxo_dac_set(0x0,   trimdac_cal_line.y_intercept);
 
                 /* Set next interrupt state. */
                 tune_state = FINE_TUNE;

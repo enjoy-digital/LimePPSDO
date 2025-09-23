@@ -17,6 +17,7 @@ from migen.genlib.cdc       import MultiReg
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.gen import *
+from litex.gen.genlib.misc import WaitTimer
 
 from litex.build.io import SDRTristate
 
@@ -27,6 +28,7 @@ from litex.soc.integration.builder  import *
 from litex.soc.interconnect.csr import *
 
 from litex.soc.cores.clock import *
+from litex.soc.cores.spi import SPIMaster
 
 from limepsb_rpcm_platform import Platform
 
@@ -102,6 +104,9 @@ class BaseSoC(SoCCore):
 
         # PPS.
         pps              = Signal()
+
+        # DAC.
+        dac_value        = Signal(16)
 
         # Rpi.
         rpi_sync_pads_i  = Signal()
@@ -199,10 +204,21 @@ class BaseSoC(SoCCore):
 
         # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
 
-        # SPI Master (AD5662 DAC).
-        # ------------------------
-        spi_pads = Record([("clk", 1), ("cs_n", 1), ("mosi", 1), ("miso", 1)])
-        self.add_spi_master(name="spi", pads=spi_pads, data_width=24, spi_clk_freq=1e6)
+        # SPI DAC Master (AD5662 DAC).
+        # ----------------------------
+        self.spi_dac = spi_dac = SPIMaster(
+            pads         = None,
+            data_width   = 24,
+            sys_clk_freq = sys_clk_freq,
+            spi_clk_freq = 1e6,
+            with_csr     = False,
+        )
+        self.comb += [
+            self.spi_dac.start.eq(1),               # Continous Update.
+            self.spi_dac.length.eq(24),
+            self.spi_dac.mosi[16:18].eq(0b00),      # Power-down control bits (PD1 PD0).
+            self.spi_dac.mosi[ 0:16].eq(dac_value), # 16-bit DAC value.
+        ]
 
         # SPI Sharing Logic.
         # ------------------
@@ -218,9 +234,9 @@ class BaseSoC(SoCCore):
              # When enabled (EN=1): CPU overrides via dedicated SPI master; DAC inaccessible from
              # RPI/CM4/CM5.
              0b1 : [
-                fpga_spi0_pads.sclk.eq(~spi_pads.clk),
-                fpga_spi0_pads.mosi.eq(spi_pads.mosi),
-                fpga_spi0_pads.dac_ss.eq(spi_pads.cs_n),
+                fpga_spi0_pads.sclk.eq(~spi_dac.pads.clk),
+                fpga_spi0_pads.mosi.eq(spi_dac.pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(spi_dac.pads.cs_n),
              ]
         })
 
@@ -267,6 +283,8 @@ class BaseSoC(SoCCore):
             self.gpsdocfg.status_accuracy      .eq(self.vctcxo_tamer.status_accuracy),
             self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state),
         ]
+
+        self.comb += dac_value.eq(self.vctcxo_tamer.status_dac_tuned_val)
 
         # GPSDO Control (Gateware <-> Firmware Exchanges) ------------------------------------------
 
