@@ -148,28 +148,6 @@ class BaseSoC(SoCCore):
         self.gpsdocfg = GPSDOCFG(spi_pads=rpi_spi1_pads)
         self.gpsdocfg.add_sources()
 
-        # Mailbox (SoC <-> CPU Communication) ------------------------------------------------------
-
-        class Mailbox(LiteXModule):
-            def __init__(self, soc):
-                self.gpsdo_en            = CSRStatus()
-                self.vctcxo_tamer_irq_in = Signal()
-                self.vctcxo_tamer_irq    = CSRStatus()
-
-                # # #
-
-                self.comb += self.gpsdo_en.status.eq(soc.gpsdocfg.config_en)
-
-                self.sync += [
-                    If(self.vctcxo_tamer_irq.we,
-                        self.vctcxo_tamer_irq.status.eq(self.vctcxo_tamer_irq_in)
-                    ).Else(
-                        self.vctcxo_tamer_irq.status.eq(self.vctcxo_tamer_irq_in | self.vctcxo_tamer_irq.status)
-                    )
-                ]
-
-        self.mailbox = Mailbox(soc=self)
-
         # TDD Redirection --------------------------------------------------------------------------
 
         self.comb += [
@@ -286,9 +264,6 @@ class BaseSoC(SoCCore):
         self.vctcxo_tamer.add_sources()
         self.bus.add_slave("vctcxo_tamer", self.vctcxo_tamer.bus, region=SoCRegion(size=0x1000))
         self.comb += [
-            # IRQ.
-            self.mailbox.vctcxo_tamer_irq_in.eq(self.vctcxo_tamer.irq),
-
             # Config.
             self.vctcxo_tamer.config_1s_target  .eq(self.gpsdocfg.config_1s_target),
             self.vctcxo_tamer.config_1s_tol     .eq(self.gpsdocfg.config_1s_tol),
@@ -305,6 +280,38 @@ class BaseSoC(SoCCore):
             self.gpsdocfg.status_accuracy      .eq(self.vctcxo_tamer.status_accuracy),
             self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state),
         ]
+
+        # GPSDO Control (Gateware <-> Firmware Exchanges) ------------------------------------------
+
+        class GPSDOControl(LiteXModule):
+            """
+            GPSDO Control Interface: CSR registers for gateware-firmware communication.
+
+            - enable : Read-only mirror of GPSDO enable signal.
+            - irq    : Sticky latch for VCTCXO tamer IRQ (clear by reading when irq is low).
+            """
+            def __init__(self, enable, irq):
+                self.enable = CSRStatus()
+                self.irq    = CSRStatus()
+
+                # # #
+
+                # Mirror enable signal combinatorially.
+                self.comb += self.enable.status.eq(enable)
+
+                # Synchronous IRQ latching: set to irq on read; else OR for stickiness.
+                self.sync += [
+                    If(self.irq.we,
+                        self.irq.status.eq(irq)
+                    ).Else(
+                        self.irq.status.eq(irq | (self.irq.status & self.irq.we))
+                    )
+                ]
+
+        self.gpsdo_control = GPSDOControl(
+            enable = self.gpsdocfg.config_en, # GPSDO config enable.
+            irq    = self.vctcxo_tamer.irq,   # VCTCXO tamer IRQ.
+        )
 
 # Build -------------------------------------------------------------------------------------------
 def main():

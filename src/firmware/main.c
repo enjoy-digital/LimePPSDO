@@ -126,12 +126,12 @@ int main(void)
     {
         /* Get VCTCXO Tamer enable bit status. */
         vctcxo_tamer_en_old = vctcxo_tamer_en;
-        vctcxo_tamer_en     = mailbox_gpsdo_en_read();
+        vctcxo_tamer_en     = gpsdo_control_enable_read();
 
         /* Get VCTCXO Tamer irq status. */
-        if (mailbox_vctcxo_tamer_irq_read()) {
+        if (gpsdo_control_irq_read()) {
             vctcxo_tamer_isr(&vctcxo_tamer_pkt);
-            mailbox_vctcxo_tamer_irq_read();
+            gpsdo_control_irq_read();
         }
 
         /* Enable or disable VCTCXO Tamer module depending on enable signal. */
