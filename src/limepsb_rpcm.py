@@ -25,8 +25,6 @@ from litex.soc.integration.soc      import SoCRegion
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder  import *
 
-from litex.soc.interconnect.csr import *
-
 from litex.soc.cores.clock import *
 from litex.soc.cores.spi import SPIMaster
 
@@ -222,7 +220,7 @@ class BaseSoC(SoCCore):
 
         # VCTCXO Tamer -----------------------------------------------------------------------------
 
-        self.vctcxo_tamer = VCTCXOTamer(pps=pps)
+        self.vctcxo_tamer = VCTCXOTamer(enable=self.gpsdocfg.config_en, pps=pps)
         self.vctcxo_tamer.add_sources()
         self.bus.add_slave("vctcxo_tamer", self.vctcxo_tamer.bus, region=SoCRegion(size=0x1000))
         self.comb += [
@@ -242,26 +240,6 @@ class BaseSoC(SoCCore):
             self.gpsdocfg.status_accuracy      .eq(self.vctcxo_tamer.status_accuracy),
             self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state),
         ]
-
-        # GPSDO Control (Gateware <-> Firmware Exchanges) ------------------------------------------
-
-        class GPSDOControl(LiteXModule):
-            """
-            GPSDO Control Interface: CSR registers for gateware-firmware communication.
-
-            - enable : Read-only mirror of GPSDO enable signal.
-            """
-            def __init__(self, enable):
-                self.enable = CSRStatus()
-
-                # # #
-
-                # Mirror enable signal combinatorially.
-                self.comb += self.enable.status.eq(enable)
-
-        self.gpsdo_control = GPSDOControl(
-            enable = self.gpsdocfg.config_en, # GPSDO config enable.
-        )
 
         # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
 

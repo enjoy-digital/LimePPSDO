@@ -97,7 +97,7 @@ int main(void)
     {
         /* Get VCTCXO Tamer enable bit status. */
         vctcxo_tamer_en_old = vctcxo_tamer_en;
-        vctcxo_tamer_en     = gpsdo_control_enable_read();
+        vctcxo_tamer_en     = (vctcxo_tamer_status_read() & 0b1);
 
         /* Check VCTCXO Tamer Error Status. */
         if (vctcxo_tamer_read(VT_STAT_ADDR) != 0) {

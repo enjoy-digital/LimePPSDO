@@ -12,14 +12,17 @@ from litex.gen import *
 
 from litex.build.vhd2v_converter import *
 
+from litex.soc.interconnect.csr import *
+
 from litex.soc.interconnect import wishbone
 
 # VCTCXO Tamer -------------------------------------------------------------------------------------
 
 class VCTCXOTamer(LiteXModule):
-    def __init__(self, pps):
-        self.bus = wishbone.Interface(data_width=32, adr_width=32)
-        self.irq = Signal()
+    def __init__(self, enable, pps):
+        self.status = CSRStatus()
+        self.bus    = wishbone.Interface(data_width=32, adr_width=32)
+        self.irq    = Signal()
 
         # Config.
         self.config_1s_target       = Signal(32)
@@ -38,6 +41,10 @@ class VCTCXOTamer(LiteXModule):
         self.status_state           = Signal(4)
 
         # # #
+
+        # Status.
+        # -------
+        self.comb += self.status.status.eq(enable)
 
         # Instance.
         # ---------
