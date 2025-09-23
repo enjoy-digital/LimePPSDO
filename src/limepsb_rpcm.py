@@ -105,9 +105,6 @@ class BaseSoC(SoCCore):
         # PPS.
         pps              = Signal()
 
-        # DAC.
-        dac_value        = Signal(16)
-
         # Rpi.
         rpi_sync_pads_i  = Signal()
 
@@ -202,44 +199,6 @@ class BaseSoC(SoCCore):
         self.pps_detector.add_sources()
         self.comb += self.gpsdocfg.status_pps_active.eq(self.pps_detector.pps_active)
 
-        # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
-
-        # SPI DAC Master (AD5662 DAC).
-        # ----------------------------
-        self.spi_dac = spi_dac = SPIMaster(
-            pads         = None,
-            data_width   = 24,
-            sys_clk_freq = sys_clk_freq,
-            spi_clk_freq = 1e6,
-            with_csr     = False,
-        )
-        self.comb += [
-            self.spi_dac.start.eq(1),               # Continous Update.
-            self.spi_dac.length.eq(24),
-            self.spi_dac.mosi[16:18].eq(0b00),      # Power-down control bits (PD1 PD0).
-            self.spi_dac.mosi[ 0:16].eq(dac_value), # 16-bit DAC value.
-        ]
-
-        # SPI Sharing Logic.
-        # ------------------
-        self.comb += Case(self.gpsdocfg.config_en, {
-            # When disabled (EN=0): RPI controls FPGA SPI0 (sclk/mosi from RPI SPI1, dac_ss=ss2) for
-            # direct DAC access.
-             0b0 : [
-                fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
-                fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
-                fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
-             ],
-
-             # When enabled (EN=1): CPU overrides via dedicated SPI master; DAC inaccessible from
-             # RPI/CM4/CM5.
-             0b1 : [
-                fpga_spi0_pads.sclk.eq(~spi_dac.pads.clk),
-                fpga_spi0_pads.mosi.eq(spi_dac.pads.mosi),
-                fpga_spi0_pads.dac_ss.eq(spi_dac.pads.cs_n),
-             ]
-        })
-
         # Sync In / Out ----------------------------------------------------------------------------
 
         # FPGA Sync Out.
@@ -284,8 +243,6 @@ class BaseSoC(SoCCore):
             self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state),
         ]
 
-        self.comb += dac_value.eq(self.vctcxo_tamer.status_dac_tuned_val)
-
         # GPSDO Control (Gateware <-> Firmware Exchanges) ------------------------------------------
 
         class GPSDOControl(LiteXModule):
@@ -317,6 +274,47 @@ class BaseSoC(SoCCore):
             enable = self.gpsdocfg.config_en, # GPSDO config enable.
             irq    = self.vctcxo_tamer.irq,   # VCTCXO tamer IRQ.
         )
+
+        # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
+
+        # SPI DAC Master (AD5662 DAC).
+        # ----------------------------
+        self.spi_dac = spi_dac = SPIMaster(
+            pads         = None,
+            data_width   = 24,
+            sys_clk_freq = sys_clk_freq,
+            spi_clk_freq = 1e6,
+            with_csr     = False,
+        )
+        self.comb += [
+            # Continous Update.
+            self.spi_dac.start.eq(1),
+            self.spi_dac.length.eq(24),
+            # Power-down control bits (PD1 PD0).
+            self.spi_dac.mosi[16:18].eq(0b00),
+            # 16-bit DAC value.
+            self.spi_dac.mosi[ 0:16].eq(self.vctcxo_tamer.status_dac_tuned_val),
+        ]
+
+        # SPI Sharing Logic.
+        # ------------------
+        self.comb += Case(self.gpsdocfg.config_en, {
+            # When disabled (EN=0): RPI controls FPGA SPI0 (sclk/mosi from RPI SPI1, dac_ss=ss2) for
+            # direct DAC access.
+             0b0 : [
+                fpga_spi0_pads.sclk.eq(rpi_spi1_pads.sclk),
+                fpga_spi0_pads.mosi.eq(rpi_spi1_pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(rpi_spi1_pads.ss2),
+             ],
+
+             # When enabled (EN=1): CPU overrides via dedicated SPI master; DAC inaccessible from
+             # RPI/CM4/CM5.
+             0b1 : [
+                fpga_spi0_pads.sclk.eq(~spi_dac.pads.clk),
+                fpga_spi0_pads.mosi.eq(spi_dac.pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(spi_dac.pads.cs_n),
+             ]
+        })
 
 # Build -------------------------------------------------------------------------------------------
 def main():
