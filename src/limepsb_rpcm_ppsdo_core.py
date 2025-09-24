@@ -232,12 +232,12 @@ class BaseSoC(SoCMini):
             o_serial_tx            = serial_pads.tx,
 
             # Core Config.
-            i_config_100s_target   = self.gpsdocfg.config_1s_target,
-            i_config_100s_tol      = self.gpsdocfg.config_1s_tol,
+            i_config_100s_target   = self.gpsdocfg.config_100s_target,
+            i_config_100s_tol      = self.gpsdocfg.config_100s_tol,
             i_config_10s_target    = self.gpsdocfg.config_10s_target,
             i_config_10s_tol       = self.gpsdocfg.config_10s_tol,
-            i_config_1s_target     = self.gpsdocfg.config_100s_target,
-            i_config_1s_tol        = self.gpsdocfg.config_100s_tol,
+            i_config_1s_target     = self.gpsdocfg.config_1s_target,
+            i_config_1s_tol        = self.gpsdocfg.config_1s_tol,
 
             # Core Status.
             o_status_100s_error    = self.gpsdocfg.status_100s_error,
