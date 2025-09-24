@@ -13,11 +13,11 @@ import os
 import argparse
 
 from migen import *
-from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.gen import *
 
-from litex.build.generic_platform import *
+from litex.build.generic_platform  import *
+from litex.build.generic_toolchain import *
 
 from litex.soc.integration.soc import SoCRegion
 from litex.soc.integration.soc_core import *
@@ -91,6 +91,7 @@ class Platform(GenericPlatform):
         os.chdir(build_dir)
         conv_output = self.get_verilog(fragment, name=build_name)
         conv_output.write(f"{build_name}.v")
+        os.chdir(os.path.abspath(os.path.dirname(__file__)))
 
 # CRG ----------------------------------------------------------------------------------------------
 
@@ -131,6 +132,7 @@ class PPSDO(SoCCore):
         kwargs["with_timer"]           = False
         kwargs["with_ctrl"]            = False
         kwargs["integrated_sram_size"] = 0x100
+        kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = firmware_path
 
         SoCCore.__init__(self, platform, sys_clk_freq, **kwargs)
@@ -234,14 +236,13 @@ def main():
         build   = ((run == 1) and args.build)
         soc = PPSDO(
             sys_clk_freq  = int(float(args.sys_clk_freq)),
-            firmware_path = None if prepare else "../../../firmware/firmware.bin",
+            firmware_path = None if prepare else "firmware/firmware.bin",
         )
         soc.platform.name = args.name
         builder = Builder(soc)
-        builder.build(run=build, build_name=args.name)
+        builder.build(run=True, build_name=args.name)
         if prepare:
-            os.system("pwd")
-            ret = os.system("cd ../../../firmware && make clean all") # FIXME.
+            ret = os.system(f"cd firmware && make clean all BUILD_DIR=../build/{args.name}")
             if ret != 0:
                 raise RuntimeError("Firmware build failed")
 
