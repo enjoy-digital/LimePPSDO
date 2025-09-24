@@ -44,7 +44,7 @@ class _CRG(LiteXModule):
         self.cd_por      = ClockDomain()
         self.cd_clk10    = ClockDomain()
         self.cd_clk30p72 = ClockDomain()
-        self.cd_vctcxo   = ClockDomain()
+        self.cd_rf       = ClockDomain()
 
         # Power On Reset.
         # ---------------
@@ -167,13 +167,13 @@ class BaseSoC(SoCMini):
         # Blinks on GNSS TPULSE when enabled; off when disabled (active low).
         self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & self.gpsdocfg.config_en))
 
-        # VCTCXO Clk Selection ---------------------------------------------------------------------
+        # RF Clk Selection -------------------------------------------------------------------------
 
         self.comb += Case(self.gpsdocfg.config_clk_sel, {
-            0b0 : ClockSignal("vctcxo").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
-            0b1 : ClockSignal("vctcxo").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
+            0b0 : ClockSignal("rf").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
+            0b1 : ClockSignal("rf").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
         })
-        platform.add_period_constraint(self.crg.cd_vctcxo.clk, 1e9/30.72e6)
+        platform.add_period_constraint(self.crg.cd_rf.clk, 1e9/30.72e6)
 
         # PPS Selection ----------------------------------------------------------------------------
 
@@ -218,8 +218,8 @@ class BaseSoC(SoCMini):
             i_sys_rst              = ResetSignal("sys"),
 
             # RF Clk/Rst.
-            i_rf_clk               = ClockSignal("vctcxo"),
-            i_rf_rst               = ResetSignal("vctcxo"),
+            i_rf_clk               = ClockSignal("rf"),
+            i_rf_rst               = ResetSignal("rf"),
 
             # Control.
             i_enable               = self.gpsdocfg.config_en,

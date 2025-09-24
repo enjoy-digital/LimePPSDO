@@ -95,8 +95,8 @@ class Platform(GenericPlatform):
 
 class _CRG(LiteXModule):
     def __init__(self, platform):
-        self.cd_sys     = ClockDomain()
-        self.cd_vctcxo  = ClockDomain()
+        self.cd_sys = ClockDomain()
+        self.cd_rf  = ClockDomain()
 
         # # #
 
@@ -108,8 +108,8 @@ class _CRG(LiteXModule):
         self.comb += [
             self.cd_sys.clk.eq(sys_clk),
             self.cd_sys.rst.eq(sys_rst),
-            self.cd_vctcxo.clk.eq(rf_clk),
-            self.cd_vctcxo.rst.eq(rf_rst),
+            self.cd_rf.clk.eq(rf_clk),
+            self.cd_rf.rst.eq(rf_rst),
         ]
 
 # PPSDO --------------------------------------------------------------------------------------------

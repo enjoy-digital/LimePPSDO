@@ -26,11 +26,11 @@ class VCTCXOTamer(LiteXModule):
 
         # Config.
         self.config_1s_target       = Signal(32)
-        self.config_1s_tol          = Signal(16)
+        self.config_1s_tol          = Signal(32)
         self.config_10s_target      = Signal(32)
-        self.config_10s_tol         = Signal(16)
+        self.config_10s_tol         = Signal(32)
         self.config_100s_target     = Signal(32)
-        self.config_100s_tol        = Signal(16)
+        self.config_100s_tol        = Signal(32)
 
         # Status.
         self.status_1s_error        = Signal(32)
@@ -50,7 +50,7 @@ class VCTCXOTamer(LiteXModule):
         # ---------
         self.specials += Instance("vctcxo_tamer",
             # Clk/PPS Inputs.
-            i_vctcxo_clock       = ClockSignal("vctcxo"),
+            i_vctcxo_clock       = ClockSignal("rf"),
             i_tune_ref           = pps,
 
             # Wishbone Interface.
