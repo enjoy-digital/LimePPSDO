@@ -113,6 +113,9 @@ class BaseSoC(SoCMini):
         # UART.
         uart_pads          = platform.request("uart")
 
+        # SPI DAC.
+        spi_dac_pads       = Record([("clk", 1), ("cs_n", 1), ("mosi", 1)])
+
         # Rpi.
         rpi_uart0_pads     = platform.request("rpi_uart0")
         rpi_spi1_pads      = platform.request("rpi_spi1")
@@ -209,10 +212,12 @@ class BaseSoC(SoCMini):
 
         # PPSDO Core -------------------------------------------------------------------------------
 
-        spi_dac_pads = Record([("clk", 1), ("cs_n", 1), ("mosi", 1)])
+        # Standalone Core Generation.
+        # ---------------------------
+        os.system(f"cd hdl/ppsdo && python3 ppsdo_core_gen.py --sys-clk-freq={sys_clk_freq}")
 
-        os.system(f"python3 ppsdo_core_gen.py")
-
+        # Standalone Core Instance.
+        # -------------------------
         self.specials += Instance("ppsdo_core",
             # Sys Clk/Rst.
             i_sys_clk              = ClockSignal("sys"),
@@ -254,9 +259,7 @@ class BaseSoC(SoCMini):
             o_spi_cs_n             = spi_dac_pads.cs_n,
             o_spi_mosi             = spi_dac_pads.mosi,
         )
-
-        # Add PPSDO sources.
-        self.import_sources("ppsdo_core_files.py")
+        self.import_sources("hdl/ppsdo/ppsdo_core_files.py")
 
         # SPI Sharing Logic.
         # ------------------
@@ -286,7 +289,10 @@ class BaseSoC(SoCMini):
         for path in files['include_paths']:
             self.platform.add_verilog_include_path(path)
         for src in files['sources']:
-            self.platform.add_source(*src)
+            path, lang, lib = src
+            if not os.path.isabs(path):
+                path = os.path.join('hdl/ppsdo', path)
+            self.platform.add_source(path, lang, lib)
 
 # Build -------------------------------------------------------------------------------------------
 def main():

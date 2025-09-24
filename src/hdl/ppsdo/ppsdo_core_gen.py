@@ -10,7 +10,10 @@
 #
 
 import os
+import sys
 import argparse
+
+sys.path.append("../../")
 
 from migen import *
 

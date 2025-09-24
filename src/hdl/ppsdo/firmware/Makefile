@@ -1,4 +1,4 @@
-BUILD_DIR?=../build/limepsb_rpcm_platform/
+BUILD_DIR?=../build/ppsdo_core/
 
 include $(BUILD_DIR)/software/include/generated/variables.mak
 include $(SOC_DIRECTORY)/software/common.mak
