@@ -255,12 +255,8 @@ class BaseSoC(SoCMini):
             o_spi_mosi             = spi_dac_pads.mosi,
         )
 
-        # Add core sources and include paths from the generated file list
-        import ppsdo_core_file_list as core_files
-        for path in core_files.include_paths:
-            platform.add_verilog_include_path(path)
-        for src in core_files.sources:
-            platform.add_source(*src)
+        # Add PPSDO sources.
+        self.import_sources("ppsdo_core_files.py")
 
         # SPI Sharing Logic.
         # ------------------
@@ -281,6 +277,16 @@ class BaseSoC(SoCMini):
                 fpga_spi0_pads.dac_ss.eq(spi_dac_pads.cs_n),
              ]
         })
+
+    def import_sources(self, filename):
+        namespace = {}
+        with open(filename, "r") as f:
+            exec(f.read(), namespace)
+        files = namespace
+        for path in files['include_paths']:
+            self.platform.add_verilog_include_path(path)
+        for src in files['sources']:
+            self.platform.add_source(*src)
 
 # Build -------------------------------------------------------------------------------------------
 def main():

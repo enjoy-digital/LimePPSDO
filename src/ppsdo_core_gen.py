@@ -215,12 +215,13 @@ class PPSDO(SoCCore):
             spi_pads.mosi.eq(spi_dac.pads.mosi),
         ]
 
-    def export_sources(self, filename=None):
-        if filename is None:
-            filename = f"{self.platform.name}_file_list.py"
-
+    def export_sources(self, filename):
         with open(filename, "w") as f:
-            f.write(f"include_paths = {repr(list(self.platform.verilog_include_paths))}\n")
+            f.write("include_paths = [\n")
+            for path in self.platform.verilog_include_paths:
+                f.write(f"    {repr(path)},\n")
+            f.write("]\n\n")
+
             sources = list(self.platform.sources)
             gateware_dir = os.path.join("build", self.platform.name, "gateware")
             verilog_file = os.path.join(gateware_dir, f"{self.platform.name}.v")
@@ -232,7 +233,11 @@ class PPSDO(SoCCore):
             sram_init = os.path.join(gateware_dir, f"{self.platform.name}_sram.init")
             if os.path.exists(sram_init):
                 sources.append((sram_init, None, None))
-            f.write(f"sources = {repr(sources)}\n")
+
+            f.write("sources = [\n")
+            for source in sources:
+                f.write(f"    {repr(source)},\n")
+            f.write("]\n")
 
 # Build --------------------------------------------------------------------------------------------
 
@@ -261,7 +266,7 @@ def main():
                 raise RuntimeError("Firmware build failed")
 
     # Export sources
-    soc.export_sources()
+    soc.export_sources(f"{args.name}_files.py")
 
 if __name__ == "__main__":
     main()
