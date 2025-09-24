@@ -79,20 +79,13 @@ class _CRG(LiteXModule):
         ]
 
 # BaseSoC ------------------------------------------------------------------------------------------
-class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=6e6, firmware_path=None, **kwargs):
+class BaseSoC(SoCMini):
+    def __init__(self, sys_clk_freq=6e6, **kwargs):
         platform = Platform()
 
-        # SoCCore ----------------------------------------------------------------------------------
+        # SoCMini ----------------------------------------------------------------------------------
 
-        kwargs["cpu_type"]             = "serv"
-        kwargs["with_timer"]           = False
-        kwargs["with_ctrl"]            = False
-        kwargs["integrated_sram_size"] = 0x100
-        kwargs["integrated_rom_size"]  = 0x2000
-        kwargs["integrated_rom_init"]  = firmware_path
-
-        SoCCore.__init__(self, platform, sys_clk_freq, ident="LimePSB-RPCM GPSDO SoC.", **kwargs)
+        SoCMini.__init__(self, platform, sys_clk_freq, ident="LimePSB-RPCM GPSDO SoC.")
 
         # CRG --------------------------------------------------------------------------------------
 
@@ -117,6 +110,9 @@ class BaseSoC(SoCCore):
         # GNSS.
         gnss_pads          = platform.request("gnss")
 
+        # UART.
+        uart_pads          = platform.request("uart")
+
         # Rpi.
         rpi_uart0_pads     = platform.request("rpi_uart0")
         rpi_spi1_pads      = platform.request("rpi_spi1")
@@ -127,7 +123,6 @@ class BaseSoC(SoCCore):
         fpga_rf_sw_tdd_pad = platform.request("fpga_rf_sw_tdd")
         fpga_spi0_pads     = platform.request("fpga_spi0")
         fpga_sync_out_pads = platform.request("fpga_sync_out")
-
 
         # BOM/HW Version ---------------------------------------------------------------------------
 
@@ -191,12 +186,6 @@ class BaseSoC(SoCCore):
             "default" : pps.eq(gnss_pads.tpulse), # GNSS TPULSE (default).
         })
 
-        # PPS Detector -----------------------------------------------------------------------------
-
-        self.pps_detector = PPSDetector(pps=pps)
-        self.pps_detector.add_sources()
-        self.comb += self.gpsdocfg.status_pps_active.eq(self.pps_detector.pps_active)
-
         # Sync In / Out ----------------------------------------------------------------------------
 
         # FPGA Sync Out.
@@ -218,49 +207,60 @@ class BaseSoC(SoCCore):
             clk = ClockSignal("sys"),
         )
 
-        # VCTCXO Tamer -----------------------------------------------------------------------------
+        # PPSDO Core -------------------------------------------------------------------------------
 
-        self.vctcxo_tamer = VCTCXOTamer(enable=self.gpsdocfg.config_en, pps=pps)
-        self.vctcxo_tamer.add_sources()
-        self.bus.add_slave("vctcxo_tamer", self.vctcxo_tamer.bus, region=SoCRegion(size=0x1000))
-        self.comb += [
-            # Config.
-            self.vctcxo_tamer.config_1s_target  .eq(self.gpsdocfg.config_1s_target),
-            self.vctcxo_tamer.config_1s_tol     .eq(self.gpsdocfg.config_1s_tol),
-            self.vctcxo_tamer.config_10s_target .eq(self.gpsdocfg.config_10s_target),
-            self.vctcxo_tamer.config_10s_tol    .eq(self.gpsdocfg.config_10s_tol),
-            self.vctcxo_tamer.config_100s_target.eq(self.gpsdocfg.config_100s_target),
-            self.vctcxo_tamer.config_100s_tol   .eq(self.gpsdocfg.config_100s_tol),
+        spi_dac_pads = Record([("clk", 1), ("cs_n", 1), ("mosi", 1)])
 
-            # Status.
-            self.gpsdocfg.status_1s_error      .eq(self.vctcxo_tamer.status_1s_error),
-            self.gpsdocfg.status_10s_error     .eq(self.vctcxo_tamer.status_10s_error),
-            self.gpsdocfg.status_100s_error    .eq(self.vctcxo_tamer.status_100s_error),
-            self.gpsdocfg.status_dac_tuned_val .eq(self.vctcxo_tamer.status_dac_tuned_val),
-            self.gpsdocfg.status_accuracy      .eq(self.vctcxo_tamer.status_accuracy),
-            self.gpsdocfg.status_state         .eq(self.vctcxo_tamer.status_state),
-        ]
+        os.system(f"python3 ppsdo_core_gen.py")
 
-        # SPI DAC Control and Sharing with Rpi -----------------------------------------------------
+        self.specials += Instance("ppsdo_core",
+            # Sys Clk/Rst.
+            i_sys_clk              = ClockSignal("sys"),
+            i_sys_rst              = ResetSignal("sys"),
 
-        # SPI DAC Master (AD5662 DAC).
-        # ----------------------------
-        self.spi_dac = spi_dac = SPIMaster(
-            pads         = None,
-            data_width   = 24,
-            sys_clk_freq = sys_clk_freq,
-            spi_clk_freq = 1e6,
-            with_csr     = False,
+            # RF Clk/Rst.
+            i_rf_clk               = ClockSignal("rf"),
+            i_rf_rst               = ResetSignal("rf"),
+
+            # Control.
+            i_enable               = self.gpsdocfg.config_en,
+
+            # PPS.
+            i_pps                  = pps,
+
+            # UART.
+            i_uart_rx              = uart_pads.rx,
+            o_uart_tx              = uart_pads.tx,
+
+            # Core Config.
+            i_config_100s_target   = self.gpsdocfg.config_100s_target,
+            i_config_100s_tol      = self.gpsdocfg.config_100s_tol,
+            i_config_10s_target    = self.gpsdocfg.config_10s_target,
+            i_config_10s_tol       = self.gpsdocfg.config_10s_tol,
+            i_config_1s_target     = self.gpsdocfg.config_1s_target,
+            i_config_1s_tol        = self.gpsdocfg.config_1s_tol,
+
+            # Core Status.
+            o_status_100s_error    = self.gpsdocfg.status_100s_error,
+            o_status_10s_error     = self.gpsdocfg.status_10s_error,
+            o_status_1s_error      = self.gpsdocfg.status_1s_error,
+            o_status_accuracy      = self.gpsdocfg.status_accuracy,
+            o_status_dac_tuned_val = self.gpsdocfg.status_dac_tuned_val,
+            o_status_pps_active    = self.gpsdocfg.status_pps_active,
+            o_status_state         = self.gpsdocfg.status_state,
+
+            # SPI DAC.
+            o_spi_clk              = spi_dac_pads.clk,
+            o_spi_cs_n             = spi_dac_pads.cs_n,
+            o_spi_mosi             = spi_dac_pads.mosi,
         )
-        self.comb += [
-            # Continous Update.
-            self.spi_dac.start.eq(1),
-            self.spi_dac.length.eq(24),
-            # Power-down control bits (PD1 PD0).
-            self.spi_dac.mosi[16:18].eq(0b00),
-            # 16-bit DAC value.
-            self.spi_dac.mosi[ 0:16].eq(self.vctcxo_tamer.status_dac_tuned_val),
-        ]
+
+        # Add core sources and include paths from the generated file list
+        import ppsdo_core_file_list as core_files
+        for path in core_files.include_paths:
+            platform.add_verilog_include_path(path)
+        for src in core_files.sources:
+            platform.add_source(*src)
 
         # SPI Sharing Logic.
         # ------------------
@@ -276,9 +276,9 @@ class BaseSoC(SoCCore):
              # When enabled (EN=1): CPU overrides via dedicated SPI master; DAC inaccessible from
              # RPI/CM4/CM5.
              0b1 : [
-                fpga_spi0_pads.sclk.eq(~spi_dac.pads.clk),
-                fpga_spi0_pads.mosi.eq(spi_dac.pads.mosi),
-                fpga_spi0_pads.dac_ss.eq(spi_dac.pads.cs_n),
+                fpga_spi0_pads.sclk.eq(spi_dac_pads.clk),
+                fpga_spi0_pads.mosi.eq(spi_dac_pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(spi_dac_pads.cs_n),
              ]
         })
 
@@ -290,20 +290,12 @@ def main():
     args = parser.parse_args()
 
     # SoC.
-    for run in range(2):
-        prepare = (run == 0)
-        build   = ((run == 1) and (args.build or args.load))
-        soc = BaseSoC(
-            sys_clk_freq  = int(float(args.sys_clk_freq)),
-            firmware_path = None if prepare else "firmware/firmware.bin",
-            **soc_core_argdict(args)
-        )
-        builder = Builder(soc, **parser.builder_argdict)
-        builder.build(run=build)
-        if prepare:
-            ret = os.system("cd firmware && make clean all")
-            if ret != 0:
-                raise RuntimeError("Firmware build failed")
+    soc = BaseSoC(
+        sys_clk_freq  = int(float(args.sys_clk_freq)),
+        **soc_core_argdict(args)
+    )
+    builder = Builder(soc, **parser.builder_argdict)
+    builder.build(run=args.build)
 
 if __name__ == "__main__":
     main()
