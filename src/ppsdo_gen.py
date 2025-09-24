@@ -42,17 +42,20 @@ def get_common_ios():
 
         # Serial
         ("serial", 0,
-            Subsignal("tx",  Pins(1)),
+            Subsignal("tx", Pins(1)),
             Subsignal("rx", Pins(1)),
         ),
 
-        # PPS input.
-        ("pps_in", 0, Pins(1)),
-
-        # Enable input.
+        # Enable Input.
         ("enable", 0, Pins(1)),
 
-        # Config inputs.
+        # PPS Input.
+        ("pps", 0, Pins(1)),
+
+        # Led.
+        ("led", 0, Pins(1)),
+
+        # Config Inputs.
         ("config_1s_target",   0, Pins(32)),
         ("config_1s_tol",      0, Pins(32)),
         ("config_10s_target",  0, Pins(32)),
@@ -60,7 +63,7 @@ def get_common_ios():
         ("config_100s_target", 0, Pins(32)),
         ("config_100s_tol",    0, Pins(32)),
 
-        # Status outputs.
+        # Status Outputs.
         ("status_1s_error",      0, Pins(32)),
         ("status_10s_error",     0, Pins(32)),
         ("status_100s_error",    0, Pins(32)),
@@ -69,15 +72,12 @@ def get_common_ios():
         ("status_state",         0, Pins(8)),
         ("status_pps_active",    0, Pins(1)),
 
-        # SPI DAC.
+        # DAC SPI.
         ("dac_spi", 0,
-            Subsignal("sclk", Pins(1)),
-            Subsignal("mosi", Pins(1)),
-            Subsignal("cs_n", Pins(1)),
+            Subsignal("sclk",   Pins(1)),
+            Subsignal("sync_n", Pins(1)),
+            Subsignal("din",    Pins(1)),
         ),
-
-        # LED.
-        ("led", 0, Pins(1)),
     ]
 
 # Platform -----------------------------------------------------------------------------------------
@@ -108,11 +108,10 @@ class _CRG(LiteXModule):
 
         self.comb += [
             self.cd_sys.clk.eq(sys_clk),
+            self.cd_sys.rst.eq(sys_rst),
             self.cd_vctcxo.clk.eq(rf_clk),
+            self.cd_vctcxo.rst.eq(rf_rst),
         ]
-
-        #self.specials += AsyncResetSynchronizer(self.cd_sys,    sys_rst)
-        #self.specials += AsyncResetSynchronizer(self.cd_vctcxo, rf_rst)
 
 # PPSDO --------------------------------------------------------------------------------------------
 
@@ -121,24 +120,30 @@ class PPSDO(SoCCore):
         platform = Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
+
+        # Minimal config to reduce resource usage on small FPGAs:
+        # - SERV CPU      : Compact RISC-V to minimize logic.
+        # - No timer/ctrl : Not needed; saves resources.
+        # - SRAM          : Minimal stack/scratchpad.
+        # - ROM           : Automatically reduced to used space by LiteX.
+
         kwargs["cpu_type"]             = "serv"
         kwargs["with_timer"]           = False
         kwargs["with_ctrl"]            = False
         kwargs["integrated_sram_size"] = 0x100
-        kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = firmware_path
 
-        SoCCore.__init__(self, platform, sys_clk_freq, ident="Standalone PPSDO SoC.", **kwargs)
+        SoCCore.__init__(self, platform, sys_clk_freq, **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
+
         self.crg = _CRG(platform)
 
-        # Signals ----------------------------------------------------------------------------------
-        pps              = Signal()
-
         # Pads -------------------------------------------------------------------------------------
-        pps_in               = platform.request("pps_in")
-        enable_in            = platform.request("enable")
+
+        #
+        pps                  = platform.request("pps")
+        enable               = platform.request("enable")
         led_pad              = platform.request("led")
         dac_spi_pads         = platform.request("dac_spi")
 
@@ -160,19 +165,17 @@ class PPSDO(SoCCore):
         status_pps_active    = platform.request("status_pps_active")
 
         # LED --------------------------------------------------------------------------------------
-        self.comb += led_pad.eq(~(pps_in & enable_in))
 
-        # PPS Selection ----------------------------------------------------------------------------
-        self.comb += pps.eq(pps_in)
+        self.comb += led_pad.eq(~(pps & enable))
 
         # PPS Detector -----------------------------------------------------------------------------
+
         self.pps_detector = PPSDetector(pps=pps)
-        # Note: add_sources() would be called in a full build; for generator, user adds HDL files manually.
         self.comb += status_pps_active.eq(self.pps_detector.pps_active)
 
         # VCTCXO Tamer -----------------------------------------------------------------------------
-        self.vctcxo_tamer = VCTCXOTamer(enable=enable_in, pps=pps)
-        # Note: add_sources() would be called in a full build; for generator, user adds HDL files manually.
+
+        self.vctcxo_tamer = VCTCXOTamer(enable=enable, pps=pps)
         self.bus.add_slave("vctcxo_tamer", self.vctcxo_tamer.bus, region=SoCRegion(size=0x1000))
         self.comb += [
             # Config.
@@ -193,6 +196,7 @@ class PPSDO(SoCCore):
         ]
 
         # SPI DAC Control (always internal, no sharing) --------------------------------------------
+
         self.spi_dac = spi_dac = SPIMaster(
             pads         = None,
             data_width   = 24,
@@ -210,8 +214,8 @@ class PPSDO(SoCCore):
             self.spi_dac.mosi[0:16].eq(self.vctcxo_tamer.status_dac_tuned_val),
             # Connect to pads.
             dac_spi_pads.sclk.eq(~spi_dac.pads.clk),
-            dac_spi_pads.mosi.eq(spi_dac.pads.mosi),
-            dac_spi_pads.cs_n.eq(spi_dac.pads.cs_n),
+            dac_spi_pads.sync_n.eq(spi_dac.pads.cs_n),
+            dac_spi_pads.din.eq(spi_dac.pads.mosi),
         ]
 
 # Build --------------------------------------------------------------------------------------------
@@ -219,9 +223,9 @@ class PPSDO(SoCCore):
 def main():
     from litex.build.parser import LiteXArgumentParser
     parser = LiteXArgumentParser(description="Standalone PPSDO core generator.")
-    parser.add_argument("--name",        default="ppsdo_soc", help="SoC Name.")
-    parser.add_argument("--build",       action="store_true", help="Generate Verilog.")
-    parser.add_argument("--sys-clk-freq",default=6e6,         help="System clock frequency (default: 6MHz)")
+    parser.add_argument("--name",        default="ppsdo_core", help="PPSDO Core Name.")
+    parser.add_argument("--build",       action="store_true",  help="Generate Verilog.")
+    parser.add_argument("--sys-clk-freq",default=6e6,          help="System clock frequency (default: 6MHz)")
     args = parser.parse_args()
 
     # SoC.
