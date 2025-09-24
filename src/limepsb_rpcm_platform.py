@@ -26,9 +26,9 @@ io = [
         IOStandard("LVCMOS33")
     ),
 
-    # Serial.
-    # -------
-    ("serial", 0,
+    # UART.
+    # ----
+    ("uart", 0,
         Subsignal("tx",  Pins("45")), # FPGA_GPIO0.
         Subsignal("rx",  Pins("21")), # FPGA_GPIO1.
         IOStandard("LVCMOS33")

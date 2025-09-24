@@ -40,16 +40,16 @@ def get_common_ios():
         ("rf_clk", 0, Pins(1)),
         ("rf_rst", 0, Pins(1)),
 
-        # Serial
-        ("serial", 0,
+        # UART.
+        ("uart", 0,
             Subsignal("tx", Pins(1)),
             Subsignal("rx", Pins(1)),
         ),
 
-        # Enable Input.
+        # Enable.
         ("enable", 0, Pins(1)),
 
-        # PPS Input.
+        # PPS.
         ("pps", 0, Pins(1)),
 
         # Config Inputs.
@@ -69,11 +69,11 @@ def get_common_ios():
         ("status_state",         0, Pins(8)),
         ("status_pps_active",    0, Pins(1)),
 
-        # DAC SPI.
-        ("dac_spi", 0,
-            Subsignal("sclk",   Pins(1)),
-            Subsignal("sync_n", Pins(1)),
-            Subsignal("din",    Pins(1)),
+        # SPI DAC.
+        ("spi", 0,
+            Subsignal("clk",  Pins(1)),
+            Subsignal("cs_n", Pins(1)),
+            Subsignal("mosi", Pins(1)),
         ),
     ]
 
@@ -129,6 +129,7 @@ class PPSDO(SoCCore):
         kwargs["cpu_type"]             = "serv"
         kwargs["with_timer"]           = False
         kwargs["with_ctrl"]            = False
+        kwargs["uart_name"]            = "uart"
         kwargs["integrated_sram_size"] = 0x100
         kwargs["integrated_rom_size"]  = 0x2000
         kwargs["integrated_rom_init"]  = firmware_path
@@ -143,7 +144,7 @@ class PPSDO(SoCCore):
 
         pps                  = platform.request("pps")
         enable               = platform.request("enable")
-        dac_spi_pads         = platform.request("dac_spi")
+        spi_pads             = platform.request("spi")
 
         # Config pads.
         config_1s_target     = platform.request("config_1s_target")
@@ -209,10 +210,29 @@ class PPSDO(SoCCore):
             # 16-bit DAC value.
             self.spi_dac.mosi[0:16].eq(self.vctcxo_tamer.status_dac_tuned_val),
             # Connect to pads.
-            dac_spi_pads.sclk.eq(~spi_dac.pads.clk),
-            dac_spi_pads.sync_n.eq(spi_dac.pads.cs_n),
-            dac_spi_pads.din.eq(spi_dac.pads.mosi),
+            spi_pads.clk.eq(~spi_dac.pads.clk),
+            spi_pads.cs_n.eq(spi_dac.pads.cs_n),
+            spi_pads.mosi.eq(spi_dac.pads.mosi),
         ]
+
+    def export_sources(self, filename=None):
+        if filename is None:
+            filename = f"{self.platform.name}_file_list.py"
+
+        with open(filename, "w") as f:
+            f.write(f"include_paths = {repr(list(self.platform.verilog_include_paths))}\n")
+            sources = list(self.platform.sources)
+            gateware_dir = os.path.join("build", self.platform.name, "gateware")
+            verilog_file = os.path.join(gateware_dir, f"{self.platform.name}.v")
+            if os.path.exists(verilog_file):
+                sources.append((verilog_file, "verilog", "work"))
+            rom_init = os.path.join(gateware_dir, f"{self.platform.name}_rom.init")
+            if os.path.exists(rom_init):
+                sources.append((rom_init, None, None))
+            sram_init = os.path.join(gateware_dir, f"{self.platform.name}_sram.init")
+            if os.path.exists(sram_init):
+                sources.append((sram_init, None, None))
+            f.write(f"sources = {repr(sources)}\n")
 
 # Build --------------------------------------------------------------------------------------------
 
@@ -240,22 +260,8 @@ def main():
             if ret != 0:
                 raise RuntimeError("Firmware build failed")
 
-    # Export file list to python file for reuse
-    file_list_path = f"{args.name}_file_list.py"
-    with open(file_list_path, "w") as f:
-        f.write(f"include_paths = {repr(list(soc.platform.verilog_include_paths))}\n")
-        sources = list(soc.platform.sources)
-        gateware_dir = os.path.join("build", args.name, "gateware")
-        verilog_file = os.path.join(gateware_dir, f"{args.name}.v")
-        if os.path.exists(verilog_file):
-            sources.append((verilog_file, "verilog", "work"))
-        rom_init = os.path.join(gateware_dir, f"{args.name}_rom.init")
-        if os.path.exists(rom_init):
-            sources.append((rom_init, None, None))
-        sram_init = os.path.join(gateware_dir, f"{args.name}_sram.init")
-        if os.path.exists(sram_init):
-            sources.append((sram_init, None, None))
-        f.write(f"sources = {repr(sources)}\n")
+    # Export sources
+    soc.export_sources()
 
 if __name__ == "__main__":
     main()

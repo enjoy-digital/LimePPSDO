@@ -110,6 +110,9 @@ class BaseSoC(SoCMini):
         # GNSS.
         gnss_pads          = platform.request("gnss")
 
+        # UART.
+        uart_pads          = platform.request("uart")
+
         # Rpi.
         rpi_uart0_pads     = platform.request("rpi_uart0")
         rpi_spi1_pads      = platform.request("rpi_spi1")
@@ -206,9 +209,7 @@ class BaseSoC(SoCMini):
 
         # PPSDO Core -------------------------------------------------------------------------------
 
-        serial_pads = platform.request("serial")
-
-        spi_dac_pads = Record([("sclk", 1), ("din", 1), ("sync_n", 1)])
+        spi_dac_pads = Record([("clk", 1), ("cs_n", 1), ("mosi", 1)])
 
         os.system(f"python3 ppsdo_gen.py")
 
@@ -228,8 +229,8 @@ class BaseSoC(SoCMini):
             i_pps                  = pps,
 
             # UART.
-            i_serial_rx            = serial_pads.rx,
-            o_serial_tx            = serial_pads.tx,
+            i_uart_rx              = uart_pads.rx,
+            o_uart_tx              = uart_pads.tx,
 
             # Core Config.
             i_config_100s_target   = self.gpsdocfg.config_100s_target,
@@ -249,10 +250,11 @@ class BaseSoC(SoCMini):
             o_status_state         = self.gpsdocfg.status_state,
 
             # SPI DAC.
-            o_dac_spi_din          = spi_dac_pads.din,
-            o_dac_spi_sclk         = spi_dac_pads.sclk,
-            o_dac_spi_sync_n       = spi_dac_pads.sync_n,
+            o_spi_clk              = spi_dac_pads.clk,
+            o_spi_cs_n             = spi_dac_pads.cs_n,
+            o_spi_mosi             = spi_dac_pads.mosi,
         )
+
         # Add core sources and include paths from the generated file list
         import ppsdo_core_file_list as core_files
         for path in core_files.include_paths:
@@ -274,9 +276,9 @@ class BaseSoC(SoCMini):
              # When enabled (EN=1): CPU overrides via dedicated SPI master; DAC inaccessible from
              # RPI/CM4/CM5.
              0b1 : [
-                fpga_spi0_pads.sclk.eq(~spi_dac_pads.sclk),
-                fpga_spi0_pads.mosi.eq(spi_dac_pads.din),
-                fpga_spi0_pads.dac_ss.eq(spi_dac_pads.sync_n),
+                fpga_spi0_pads.sclk.eq(spi_dac_pads.clk),
+                fpga_spi0_pads.mosi.eq(spi_dac_pads.mosi),
+                fpga_spi0_pads.dac_ss.eq(spi_dac_pads.cs_n),
              ]
         })
 
