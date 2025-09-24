@@ -234,11 +234,28 @@ def main():
         )
         soc.platform.name = args.name
         builder = Builder(soc)
-        builder.build(run=True, build_name=args.name)
+        builder.build(run=build, build_name=args.name)
         if prepare:
             ret = os.system(f"cd firmware && make clean all BUILD_DIR=../build/{args.name}")
             if ret != 0:
                 raise RuntimeError("Firmware build failed")
+
+    # Export file list to python file for reuse
+    file_list_path = f"{args.name}_file_list.py"
+    with open(file_list_path, "w") as f:
+        f.write(f"include_paths = {repr(list(soc.platform.verilog_include_paths))}\n")
+        sources = list(soc.platform.sources)
+        gateware_dir = os.path.join("build", args.name, "gateware")
+        verilog_file = os.path.join(gateware_dir, f"{args.name}.v")
+        if os.path.exists(verilog_file):
+            sources.append((verilog_file, "verilog", "work"))
+        rom_init = os.path.join(gateware_dir, f"{args.name}_rom.init")
+        if os.path.exists(rom_init):
+            sources.append((rom_init, None, None))
+        sram_init = os.path.join(gateware_dir, f"{args.name}_sram.init")
+        if os.path.exists(sram_init):
+            sources.append((sram_init, None, None))
+        f.write(f"sources = {repr(sources)}\n")
 
 if __name__ == "__main__":
     main()
