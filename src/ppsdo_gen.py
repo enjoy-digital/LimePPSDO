@@ -52,9 +52,6 @@ def get_common_ios():
         # PPS Input.
         ("pps", 0, Pins(1)),
 
-        # Led.
-        ("led", 0, Pins(1)),
-
         # Config Inputs.
         ("config_1s_target",   0, Pins(32)),
         ("config_1s_tol",      0, Pins(32)),
@@ -85,6 +82,7 @@ def get_common_ios():
 class Platform(GenericPlatform):
     def __init__(self):
         super().__init__(device="", io=get_common_ios())
+        self.toolchain._support_mixed_language = False
 
     def build(self, fragment, build_dir, build_name, **kwargs):
         os.makedirs(build_dir, exist_ok=True)
@@ -143,10 +141,8 @@ class PPSDO(SoCCore):
 
         # Pads -------------------------------------------------------------------------------------
 
-        #
         pps                  = platform.request("pps")
         enable               = platform.request("enable")
-        led_pad              = platform.request("led")
         dac_spi_pads         = platform.request("dac_spi")
 
         # Config pads.
@@ -166,18 +162,16 @@ class PPSDO(SoCCore):
         status_state         = platform.request("status_state")
         status_pps_active    = platform.request("status_pps_active")
 
-        # LED --------------------------------------------------------------------------------------
-
-        self.comb += led_pad.eq(~(pps & enable))
-
         # PPS Detector -----------------------------------------------------------------------------
 
         self.pps_detector = PPSDetector(pps=pps)
+        self.pps_detector.add_sources()
         self.comb += status_pps_active.eq(self.pps_detector.pps_active)
 
         # VCTCXO Tamer -----------------------------------------------------------------------------
 
         self.vctcxo_tamer = VCTCXOTamer(enable=enable, pps=pps)
+        self.vctcxo_tamer.add_sources()
         self.bus.add_slave("vctcxo_tamer", self.vctcxo_tamer.bus, region=SoCRegion(size=0x1000))
         self.comb += [
             # Config.
