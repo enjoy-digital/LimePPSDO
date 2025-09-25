@@ -219,14 +219,15 @@ class PPSDO(SoCCore):
         ]
 
     def export_sources(self, filename):
-        with open(filename, "w") as f:
+        gateware_dir = os.path.join("build", self.platform.name, "gateware")
+        output_path  = os.path.join(gateware_dir, filename)
+        os.makedirs(gateware_dir, exist_ok=True)
+        with open(output_path, "w") as f:
             f.write("include_paths = [\n")
             for path in self.platform.verilog_include_paths:
-                f.write(f"    {repr(path)},\n")
+                f.write(f" {repr(path)},\n")
             f.write("]\n\n")
-
             sources = list(self.platform.sources)
-            gateware_dir = os.path.join("build", self.platform.name, "gateware")
             verilog_file = os.path.join(gateware_dir, f"{self.platform.name}.v")
             if os.path.exists(verilog_file):
                 sources.append((verilog_file, "verilog", "work"))
@@ -236,10 +237,9 @@ class PPSDO(SoCCore):
             sram_init = os.path.join(gateware_dir, f"{self.platform.name}_sram.init")
             if os.path.exists(sram_init):
                 sources.append((sram_init, None, None))
-
             f.write("sources = [\n")
             for source in sources:
-                f.write(f"    {repr(source)},\n")
+                f.write(f" {repr(source)},\n")
             f.write("]\n")
 
 # Build --------------------------------------------------------------------------------------------

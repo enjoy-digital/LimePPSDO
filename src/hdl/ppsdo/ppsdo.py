@@ -122,7 +122,7 @@ class PPSDO(LiteXModule):
 
         # Import Core Sources.
         # --------------------
-        self.import_sources(LiteXContext.platform, f"{cdir}/ppsdo_sources.py")
+        self.import_sources(LiteXContext.platform, f"{cdir}/build/ppsdo/gateware/ppsdo_sources.py")
 
     def import_sources(self, platform, filename):
         cdir = os.path.abspath(os.path.dirname(__file__))
