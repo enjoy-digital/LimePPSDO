@@ -170,11 +170,11 @@ class BaseSoC(SoCMini):
         # Led --------------------------------------------------------------------------------------
 
         # Blinks on GNSS TPULSE when enabled; off when disabled (active low).
-        self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & self.gpsdocfg.config_en))
+        self.comb += fpga_led_r.eq(~(gnss_pads.tpulse & self.gpsdocfg.config.en))
 
         # RF Clk Selection -------------------------------------------------------------------------
 
-        self.comb += Case(self.gpsdocfg.config_clk_sel, {
+        self.comb += Case(self.gpsdocfg.config.clk_sel, {
             0b0 : ClockSignal("rf").eq(ClockSignal("clk30p72")), # VCTCXO Clk from 30.72MHz XO (Default).
             0b1 : ClockSignal("rf").eq(ClockSignal("clk10")),    # VCTCXO Clk from 10MHz XO.
         })
@@ -182,7 +182,7 @@ class BaseSoC(SoCMini):
 
         # PPS Selection ----------------------------------------------------------------------------
 
-        self.comb += Case(self.gpsdocfg.config_tpulse_sel, {
+        self.comb += Case(self.gpsdocfg.config.tpulse_sel, {
             0b01      : pps.eq(rpi_sync_pads.o),  # Rpi_Sync Out.
             0b10      : pps.eq(rpi_sync_pads_i),  # Rpi_Sync In.
             "default" : pps.eq(gnss_pads.tpulse), # GNSS TPULSE (default).
@@ -205,7 +205,7 @@ class BaseSoC(SoCMini):
             io  = rpi_sync_pads.i,
             i   = rpi_sync_pads_i,
             o   = gnss_pads.tpulse,
-            oe  = ~((self.gpsdocfg.config_rpi_sync_in_dir == 0) | (self.gpsdocfg.config_tpulse_sel == 0b10)),
+            oe  = ~((self.gpsdocfg.config.rpi_sync_in_dir == 0) | (self.gpsdocfg.config.tpulse_sel == 0b10)),
             clk = ClockSignal("sys"),
         )
 
@@ -215,7 +215,7 @@ class BaseSoC(SoCMini):
         self.ppsdo.add_sources()
         self.comb += [
             # Control.
-            ppsdo.enable.eq(self.gpsdocfg.config_en),
+            ppsdo.enable.eq(self.gpsdocfg.config.en),
 
             # PPS.
             ppsdo.pps.eq(pps),
@@ -225,21 +225,10 @@ class BaseSoC(SoCMini):
             uart_pads.tx.eq(ppsdo.uart.tx),
 
             # Core Config.
-            ppsdo.config.hundred_s_target.eq(self.gpsdocfg.config_100s_target),
-            ppsdo.config.hundred_s_tol   .eq(self.gpsdocfg.config_100s_tol),
-            ppsdo.config.ten_s_target    .eq(self.gpsdocfg.config_10s_target),
-            ppsdo.config.ten_s_tol       .eq(self.gpsdocfg.config_10s_tol),
-            ppsdo.config.one_s_target    .eq(self.gpsdocfg.config_1s_target),
-            ppsdo.config.one_s_tol       .eq(self.gpsdocfg.config_1s_tol),
+            self.gpsdocfg.config.connect(ppsdo.config, omit={"en", "clk_sel", "tpulse_sel", "rpi_sync_in_dir"}),
 
             # Core Status.
-            self.gpsdocfg.status_100s_error   .eq(ppsdo.status.hundred_s_error),
-            self.gpsdocfg.status_10s_error    .eq(ppsdo.status.ten_s_error),
-            self.gpsdocfg.status_1s_error     .eq(ppsdo.status.one_s_error),
-            self.gpsdocfg.status_accuracy     .eq(ppsdo.status.accuracy),
-            self.gpsdocfg.status_dac_tuned_val.eq(ppsdo.status.dac_tuned_val),
-            self.gpsdocfg.status_pps_active   .eq(ppsdo.status.pps_active),
-            self.gpsdocfg.status_state        .eq(ppsdo.status.state),
+            self.ppsdo.status.connect(self.gpsdocfg.status),
 
             # SPI DAC.
             spi_dac_pads.clk.eq(ppsdo.spi.clk),
@@ -249,7 +238,7 @@ class BaseSoC(SoCMini):
 
         # SPI Sharing Logic.
         # ------------------
-        self.comb += Case(self.gpsdocfg.config_en, {
+        self.comb += Case(self.gpsdocfg.config.en, {
             # When disabled (EN=0): RPI controls FPGA SPI0 (sclk/mosi from RPI SPI1, dac_ss=ss2) for
             # direct DAC access.
              0b0 : [

@@ -26,22 +26,22 @@ ppsdo_spi_layout = [
 ]
 
 ppsdo_config_layout = [
-    ("one_s_target",    32),  # Target value for 1-second interval.
-    ("one_s_tol",       32),  # Tolerance for 1-second interval.
-    ("ten_s_target",    32),  # Target value for 10-second interval.
-    ("ten_s_tol",       32),  # Tolerance for 10-second interval.
-    ("hundred_s_target",32),  # Target value for 100-second interval.
-    ("hundred_s_tol",   32),  # Tolerance for 100-second interval.
+    ("one_s_target",    32, DIR_M_TO_S),  # Target value for 1-second interval.
+    ("one_s_tol",       32, DIR_M_TO_S),  # Tolerance for 1-second interval.
+    ("ten_s_target",    32, DIR_M_TO_S),  # Target value for 10-second interval.
+    ("ten_s_tol",       32, DIR_M_TO_S),  # Tolerance for 10-second interval.
+    ("hundred_s_target",32, DIR_M_TO_S),  # Target value for 100-second interval.
+    ("hundred_s_tol",   32, DIR_M_TO_S),  # Tolerance for 100-second interval.
 ]
 
 ppsdo_status_layout = [
-    ("one_s_error",      32),  # Error value for 1-second interval.
-    ("ten_s_error",      32),  # Error value for 10-second interval.
-    ("hundred_s_error",  32),  # Error value for 100-second interval.
-    ("dac_tuned_val",    16),  # DAC tuned value.
-    ("accuracy",          4),  # Accuracy status.
-    ("pps_active",        1),  # PPS active status.
-    ("state",             4),  # Current state.
+    ("one_s_error",      32, DIR_M_TO_S),  # Error value for 1-second interval.
+    ("ten_s_error",      32, DIR_M_TO_S),  # Error value for 10-second interval.
+    ("hundred_s_error",  32, DIR_M_TO_S),  # Error value for 100-second interval.
+    ("dac_tuned_val",    16, DIR_M_TO_S),  # DAC tuned value.
+    ("accuracy",          4, DIR_M_TO_S),  # Accuracy status.
+    ("pps_active",        1, DIR_M_TO_S),  # PPS active status.
+    ("state",             4, DIR_M_TO_S),  # Current state.
 ]
 
 # PPSDO --------------------------------------------------------------------------------------------
