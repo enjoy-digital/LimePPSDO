@@ -12,7 +12,18 @@ from migen import *
 
 from litex.gen import *
 
-# PPSDO Layouts -----------------------------------------------------------------------------------
+# PPSDO Layouts ------------------------------------------------------------------------------------
+
+ppsdo_uart_layout = [
+    ("rx",  1),
+    ("tx",  1),
+]
+
+ppsdo_spi_layout = [
+    ("clk",   1),
+    ("cs_n",  1),
+    ("mosi",  1),
+]
 
 ppsdo_config_layout = [
     ("one_s_target",    32),  # Target value for 1-second interval.
@@ -38,25 +49,22 @@ ppsdo_status_layout = [
 class PPSDO(LiteXModule):
     def __init__(self, cd_sys="sys", cd_rf="rf"):
         # Control.
-        self.enable   = Signal()
+        self.enable = Signal()
 
         # PPS.
-        self.pps      = Signal()
+        self.pps    = Signal()
 
         # UART.
-        self.uart_rx  = Signal()
-        self.uart_tx  = Signal()
+        self.uart   = Record(ppsdo_uart_layout)
 
         # Config.
-        self.config   = Record(ppsdo_config_layout)
+        self.config = Record(ppsdo_config_layout)
 
         # Status.
-        self.status   = Record(ppsdo_status_layout)
+        self.status = Record(ppsdo_status_layout)
 
         # SPI DAC.
-        self.spi_clk  = Signal()
-        self.spi_cs_n = Signal()
-        self.spi_mosi = Signal()
+        self.spi    = Record(ppsdo_spi_layout)
 
         # # #
 
@@ -78,8 +86,8 @@ class PPSDO(LiteXModule):
             i_pps                  = self.pps,
 
             # UART.
-            i_uart_rx              = self.uart_rx,
-            o_uart_tx              = self.uart_tx,
+            i_uart_rx              = self.uart.rx,
+            o_uart_tx              = self.uart.tx,
 
             # Core Config.
             i_config_1s_target     = self.config.one_s_target,
@@ -99,9 +107,9 @@ class PPSDO(LiteXModule):
             o_status_state         = self.status.state,
 
             # SPI DAC.
-            o_spi_clk              = self.spi_clk,
-            o_spi_cs_n             = self.spi_cs_n,
-            o_spi_mosi             = self.spi_mosi,
+            o_spi_clk              = self.spi.clk,
+            o_spi_cs_n             = self.spi.cs_n,
+            o_spi_mosi             = self.spi.mosi,
         )
 
     def add_sources(self):

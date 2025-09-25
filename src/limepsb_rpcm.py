@@ -221,8 +221,8 @@ class BaseSoC(SoCMini):
             ppsdo.pps.eq(pps),
 
             # UART.
-            ppsdo.uart_rx.eq(uart_pads.rx),
-            uart_pads.tx.eq(ppsdo.uart_tx),
+            ppsdo.uart.rx.eq(uart_pads.rx),
+            uart_pads.tx.eq(ppsdo.uart.tx),
 
             # Core Config.
             ppsdo.config.hundred_s_target.eq(self.gpsdocfg.config_100s_target),
@@ -242,9 +242,9 @@ class BaseSoC(SoCMini):
             self.gpsdocfg.status_state        .eq(ppsdo.status.state),
 
             # SPI DAC.
-            spi_dac_pads.clk.eq(ppsdo.spi_clk),
-            spi_dac_pads.cs_n.eq(ppsdo.spi_cs_n),
-            spi_dac_pads.mosi.eq(ppsdo.spi_mosi),
+            spi_dac_pads.clk.eq(ppsdo.spi.clk),
+            spi_dac_pads.cs_n.eq(ppsdo.spi.cs_n),
+            spi_dac_pads.mosi.eq(ppsdo.spi.mosi),
         ]
 
         # SPI Sharing Logic.
