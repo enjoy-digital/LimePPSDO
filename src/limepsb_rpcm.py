@@ -225,21 +225,21 @@ class BaseSoC(SoCMini):
             uart_pads.tx.eq(ppsdo.uart_tx),
 
             # Core Config.
-            ppsdo.config_100s_target.eq(self.gpsdocfg.config_100s_target),
-            ppsdo.config_100s_tol   .eq(self.gpsdocfg.config_100s_tol),
-            ppsdo.config_10s_target .eq(self.gpsdocfg.config_10s_target),
-            ppsdo.config_10s_tol    .eq(self.gpsdocfg.config_10s_tol),
-            ppsdo.config_1s_target  .eq(self.gpsdocfg.config_1s_target),
-            ppsdo.config_1s_tol     .eq(self.gpsdocfg.config_1s_tol),
+            ppsdo.config.hundred_s_target.eq(self.gpsdocfg.config_100s_target),
+            ppsdo.config.hundred_s_tol   .eq(self.gpsdocfg.config_100s_tol),
+            ppsdo.config.ten_s_target    .eq(self.gpsdocfg.config_10s_target),
+            ppsdo.config.ten_s_tol       .eq(self.gpsdocfg.config_10s_tol),
+            ppsdo.config.one_s_target    .eq(self.gpsdocfg.config_1s_target),
+            ppsdo.config.one_s_tol       .eq(self.gpsdocfg.config_1s_tol),
 
             # Core Status.
-            self.gpsdocfg.status_100s_error   .eq(ppsdo.status_100s_error),
-            self.gpsdocfg.status_10s_error    .eq(ppsdo.status_10s_error),
-            self.gpsdocfg.status_1s_error     .eq(ppsdo.status_1s_error),
-            self.gpsdocfg.status_accuracy     .eq(ppsdo.status_accuracy),
-            self.gpsdocfg.status_dac_tuned_val.eq(ppsdo.status_dac_tuned_val),
-            self.gpsdocfg.status_pps_active   .eq(ppsdo.status_pps_active),
-            self.gpsdocfg.status_state        .eq(ppsdo.status_state),
+            self.gpsdocfg.status_100s_error   .eq(ppsdo.status.hundred_s_error),
+            self.gpsdocfg.status_10s_error    .eq(ppsdo.status.ten_s_error),
+            self.gpsdocfg.status_1s_error     .eq(ppsdo.status.one_s_error),
+            self.gpsdocfg.status_accuracy     .eq(ppsdo.status.accuracy),
+            self.gpsdocfg.status_dac_tuned_val.eq(ppsdo.status.dac_tuned_val),
+            self.gpsdocfg.status_pps_active   .eq(ppsdo.status.pps_active),
+            self.gpsdocfg.status_state        .eq(ppsdo.status.state),
 
             # SPI DAC.
             spi_dac_pads.clk.eq(ppsdo.spi_clk),

@@ -12,41 +12,51 @@ from migen import *
 
 from litex.gen import *
 
+# PPSDO Layouts -----------------------------------------------------------------------------------
+
+ppsdo_config_layout = [
+    ("one_s_target",    32),  # Target value for 1-second interval.
+    ("one_s_tol",       32),  # Tolerance for 1-second interval.
+    ("ten_s_target",    32),  # Target value for 10-second interval.
+    ("ten_s_tol",       32),  # Tolerance for 10-second interval.
+    ("hundred_s_target",32),  # Target value for 100-second interval.
+    ("hundred_s_tol",   32),  # Tolerance for 100-second interval.
+]
+
+ppsdo_status_layout = [
+    ("one_s_error",      32),  # Error value for 1-second interval.
+    ("ten_s_error",      32),  # Error value for 10-second interval.
+    ("hundred_s_error",  32),  # Error value for 100-second interval.
+    ("dac_tuned_val",    16),  # DAC tuned value.
+    ("accuracy",          4),  # Accuracy status.
+    ("pps_active",        1),  # PPS active status.
+    ("state",             4),  # Current state.
+]
+
 # PPSDO --------------------------------------------------------------------------------------------
 
 class PPSDO(LiteXModule):
     def __init__(self, cd_sys="sys", cd_rf="rf"):
         # Control.
-        self.enable               = Signal()
+        self.enable   = Signal()
 
         # PPS.
-        self.pps                  = Signal()
+        self.pps      = Signal()
 
         # UART.
-        self.uart_rx              = Signal()
-        self.uart_tx              = Signal()
+        self.uart_rx  = Signal()
+        self.uart_tx  = Signal()
 
         # Config.
-        self.config_1s_target     = Signal(32)
-        self.config_1s_tol        = Signal(32)
-        self.config_10s_target    = Signal(32)
-        self.config_10s_tol       = Signal(32)
-        self.config_100s_target   = Signal(32)
-        self.config_100s_tol      = Signal(32)
+        self.config   = Record(ppsdo_config_layout)
 
         # Status.
-        self.status_1s_error      = Signal(32)
-        self.status_10s_error     = Signal(32)
-        self.status_100s_error    = Signal(32)
-        self.status_dac_tuned_val = Signal(16)
-        self.status_accuracy      = Signal(4)
-        self.status_pps_active    = Signal()
-        self.status_state         = Signal(4)
+        self.status   = Record(ppsdo_status_layout)
 
         # SPI DAC.
-        self.spi_clk              = Signal()
-        self.spi_cs_n             = Signal()
-        self.spi_mosi             = Signal()
+        self.spi_clk  = Signal()
+        self.spi_cs_n = Signal()
+        self.spi_mosi = Signal()
 
         # # #
 
@@ -72,21 +82,21 @@ class PPSDO(LiteXModule):
             o_uart_tx              = self.uart_tx,
 
             # Core Config.
-            i_config_1s_target     = self.config_1s_target,
-            i_config_1s_tol        = self.config_1s_tol,
-            i_config_10s_target    = self.config_10s_target,
-            i_config_10s_tol       = self.config_10s_tol,
-            i_config_100s_target   = self.config_100s_target,
-            i_config_100s_tol      = self.config_100s_tol,
+            i_config_1s_target     = self.config.one_s_target,
+            i_config_1s_tol        = self.config.one_s_tol,
+            i_config_10s_target    = self.config.ten_s_target,
+            i_config_10s_tol       = self.config.ten_s_tol,
+            i_config_100s_target   = self.config.hundred_s_target,
+            i_config_100s_tol      = self.config.hundred_s_tol,
 
             # Core Status.
-            o_status_1s_error      = self.status_1s_error,
-            o_status_10s_error     = self.status_10s_error,
-            o_status_100s_error    = self.status_100s_error,
-            o_status_accuracy      = self.status_accuracy,
-            o_status_dac_tuned_val = self.status_dac_tuned_val,
-            o_status_pps_active    = self.status_pps_active,
-            o_status_state         = self.status_state,
+            o_status_1s_error      = self.status.one_s_error,
+            o_status_10s_error     = self.status.ten_s_error,
+            o_status_100s_error    = self.status.hundred_s_error,
+            o_status_dac_tuned_val = self.status.dac_tuned_val,
+            o_status_accuracy      = self.status.accuracy,
+            o_status_pps_active    = self.status.pps_active,
+            o_status_state         = self.status.state,
 
             # SPI DAC.
             o_spi_clk              = self.spi_clk,
