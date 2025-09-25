@@ -214,11 +214,11 @@ class BaseSoC(SoCMini):
 
         # Standalone Core Generation.
         # ---------------------------
-        os.system(f"cd hdl/ppsdo && python3 ppsdo_core_gen.py --sys-clk-freq={sys_clk_freq}")
+        os.system(f"cd hdl/ppsdo && python3 ppsdo_gen.py --sys-clk-freq={sys_clk_freq}")
 
         # Standalone Core Instance.
         # -------------------------
-        self.specials += Instance("ppsdo_core",
+        self.specials += Instance("ppsdo",
             # Sys Clk/Rst.
             i_sys_clk              = ClockSignal("sys"),
             i_sys_rst              = ResetSignal("sys"),
@@ -259,7 +259,7 @@ class BaseSoC(SoCMini):
             o_spi_cs_n             = spi_dac_pads.cs_n,
             o_spi_mosi             = spi_dac_pads.mosi,
         )
-        self.import_sources("hdl/ppsdo/ppsdo_core_files.py")
+        self.import_sources("hdl/ppsdo/ppsdo_sources.py")
 
         # SPI Sharing Logic.
         # ------------------

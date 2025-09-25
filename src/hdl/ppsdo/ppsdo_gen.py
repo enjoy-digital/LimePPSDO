@@ -247,7 +247,6 @@ class PPSDO(SoCCore):
 def main():
     from litex.build.parser import LiteXArgumentParser
     parser = LiteXArgumentParser(description="Standalone PPSDO core generator.")
-    parser.add_argument("--name",        default="ppsdo_core", help="PPSDO Core Name.")
     parser.add_argument("--build",       action="store_true",  help="Generate Verilog.")
     parser.add_argument("--sys-clk-freq",default=6e6,          help="System clock frequency (default: 6MHz)")
     args = parser.parse_args()
@@ -260,16 +259,16 @@ def main():
             sys_clk_freq  = int(float(args.sys_clk_freq)),
             firmware_path = None if prepare else "firmware/firmware.bin",
         )
-        soc.platform.name = args.name
+        soc.platform.name = "ppsdo"
         builder = Builder(soc)
-        builder.build(run=build, build_name=args.name)
+        builder.build(run=build)
         if prepare:
-            ret = os.system(f"cd firmware && make clean all BUILD_DIR=../build/{args.name}")
+            ret = os.system(f"cd firmware && make clean all BUILD_DIR=../build/ppsdo")
             if ret != 0:
                 raise RuntimeError("Firmware build failed")
 
     # Export sources
-    soc.export_sources(f"{args.name}_files.py")
+    soc.export_sources(f"ppsdo_sources.py")
 
 if __name__ == "__main__":
     main()
