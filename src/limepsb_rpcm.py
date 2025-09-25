@@ -30,9 +30,8 @@ from litex.soc.cores.spi import SPIMaster
 
 from limepsb_rpcm_platform import Platform
 
-from hdl.gpsdocfg.src.gpsdocfg         import GPSDOCFG
-from hdl.pps_detector.src.pps_detector import PPSDetector
-from hdl.vctcxo_tamer.src.vctcxo_tamer import VCTCXOTamer
+from hdl.gpsdocfg.src.gpsdocfg import GPSDOCFG
+from hdl.ppsdo.ppsdo           import PPSDO
 
 # CRG ----------------------------------------------------------------------------------------------
 
@@ -212,54 +211,41 @@ class BaseSoC(SoCMini):
 
         # PPSDO Core -------------------------------------------------------------------------------
 
-        # Standalone Core Generation.
-        # ---------------------------
-        os.system(f"cd hdl/ppsdo && python3 ppsdo_gen.py --sys-clk-freq={sys_clk_freq}")
-
-        # Standalone Core Instance.
-        # -------------------------
-        self.specials += Instance("ppsdo",
-            # Sys Clk/Rst.
-            i_sys_clk              = ClockSignal("sys"),
-            i_sys_rst              = ResetSignal("sys"),
-
-            # RF Clk/Rst.
-            i_rf_clk               = ClockSignal("rf"),
-            i_rf_rst               = ResetSignal("rf"),
-
+        self.ppsdo = ppsdo = PPSDO()
+        self.ppsdo.add_sources()
+        self.comb += [
             # Control.
-            i_enable               = self.gpsdocfg.config_en,
+            ppsdo.enable.eq(self.gpsdocfg.config_en),
 
             # PPS.
-            i_pps                  = pps,
+            ppsdo.pps.eq(pps),
 
             # UART.
-            i_uart_rx              = uart_pads.rx,
-            o_uart_tx              = uart_pads.tx,
+            ppsdo.uart_rx.eq(uart_pads.rx),
+            uart_pads.tx.eq(ppsdo.uart_tx),
 
             # Core Config.
-            i_config_100s_target   = self.gpsdocfg.config_100s_target,
-            i_config_100s_tol      = self.gpsdocfg.config_100s_tol,
-            i_config_10s_target    = self.gpsdocfg.config_10s_target,
-            i_config_10s_tol       = self.gpsdocfg.config_10s_tol,
-            i_config_1s_target     = self.gpsdocfg.config_1s_target,
-            i_config_1s_tol        = self.gpsdocfg.config_1s_tol,
+            ppsdo.config_100s_target.eq(self.gpsdocfg.config_100s_target),
+            ppsdo.config_100s_tol   .eq(self.gpsdocfg.config_100s_tol),
+            ppsdo.config_10s_target .eq(self.gpsdocfg.config_10s_target),
+            ppsdo.config_10s_tol    .eq(self.gpsdocfg.config_10s_tol),
+            ppsdo.config_1s_target  .eq(self.gpsdocfg.config_1s_target),
+            ppsdo.config_1s_tol     .eq(self.gpsdocfg.config_1s_tol),
 
             # Core Status.
-            o_status_100s_error    = self.gpsdocfg.status_100s_error,
-            o_status_10s_error     = self.gpsdocfg.status_10s_error,
-            o_status_1s_error      = self.gpsdocfg.status_1s_error,
-            o_status_accuracy      = self.gpsdocfg.status_accuracy,
-            o_status_dac_tuned_val = self.gpsdocfg.status_dac_tuned_val,
-            o_status_pps_active    = self.gpsdocfg.status_pps_active,
-            o_status_state         = self.gpsdocfg.status_state,
+            self.gpsdocfg.status_100s_error   .eq(ppsdo.status_100s_error),
+            self.gpsdocfg.status_10s_error    .eq(ppsdo.status_10s_error),
+            self.gpsdocfg.status_1s_error     .eq(ppsdo.status_1s_error),
+            self.gpsdocfg.status_accuracy     .eq(ppsdo.status_accuracy),
+            self.gpsdocfg.status_dac_tuned_val.eq(ppsdo.status_dac_tuned_val),
+            self.gpsdocfg.status_pps_active   .eq(ppsdo.status_pps_active),
+            self.gpsdocfg.status_state        .eq(ppsdo.status_state),
 
             # SPI DAC.
-            o_spi_clk              = spi_dac_pads.clk,
-            o_spi_cs_n             = spi_dac_pads.cs_n,
-            o_spi_mosi             = spi_dac_pads.mosi,
-        )
-        self.import_sources("hdl/ppsdo/ppsdo_sources.py")
+            spi_dac_pads.clk.eq(ppsdo.spi_clk),
+            spi_dac_pads.cs_n.eq(ppsdo.spi_cs_n),
+            spi_dac_pads.mosi.eq(ppsdo.spi_mosi),
+        ]
 
         # SPI Sharing Logic.
         # ------------------
@@ -280,19 +266,6 @@ class BaseSoC(SoCMini):
                 fpga_spi0_pads.dac_ss.eq(spi_dac_pads.cs_n),
              ]
         })
-
-    def import_sources(self, filename):
-        namespace = {}
-        with open(filename, "r") as f:
-            exec(f.read(), namespace)
-        files = namespace
-        for path in files['include_paths']:
-            self.platform.add_verilog_include_path(path)
-        for src in files['sources']:
-            path, lang, lib = src
-            if not os.path.isabs(path):
-                path = os.path.join('hdl/ppsdo', path)
-            self.platform.add_source(path, lang, lib)
 
 # Build -------------------------------------------------------------------------------------------
 def main():
