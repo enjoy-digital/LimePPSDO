@@ -12,6 +12,8 @@ from migen import *
 
 from litex.gen import *
 
+from litex.soc.interconnect.csr import *
+
 # PPSDO Layouts ------------------------------------------------------------------------------------
 
 ppsdo_uart_layout = [
@@ -47,7 +49,7 @@ ppsdo_status_layout = [
 # PPSDO --------------------------------------------------------------------------------------------
 
 class PPSDO(LiteXModule):
-    def __init__(self, cd_sys="sys", cd_rf="rf"):
+    def __init__(self, cd_sys="sys", cd_rf="rf", with_csr=False):
         # Control.
         self.enable = Signal()
 
@@ -65,6 +67,10 @@ class PPSDO(LiteXModule):
 
         # SPI DAC.
         self.spi    = Record(ppsdo_spi_layout)
+
+        # CSRs.
+        if with_csr:
+            self.add_csr()
 
         # # #
 
@@ -111,6 +117,44 @@ class PPSDO(LiteXModule):
             o_spi_cs_n             = self.spi.cs_n,
             o_spi_mosi             = self.spi.mosi,
         )
+
+    def add_csr(self):
+        # Enable.
+        self._enable = CSRStorage(description="Enable control for PPSDO core")
+
+        # Config.
+        self._config_one_s_target     = CSRStorage(32, description="Target value for 1-second interval.")
+        self._config_one_s_tol        = CSRStorage(32, description="Tolerance for 1-second interval.")
+        self._config_ten_s_target     = CSRStorage(32, description="Target value for 10-second interval.")
+        self._config_ten_s_tol        = CSRStorage(32, description="Tolerance for 10-second interval.")
+        self._config_hundred_s_target = CSRStorage(32, description="Target value for 100-second interval.")
+        self._config_hundred_s_tol    = CSRStorage(32, description="Tolerance for 100-second interval.")
+        self.comb += [
+            self.config.one_s_target    .eq(self._config_one_s_target.storage),
+            self.config.one_s_tol       .eq(self._config_one_s_tol.storage),
+            self.config.ten_s_target    .eq(self._config_ten_s_target.storage),
+            self.config.ten_s_tol       .eq(self._config_ten_s_tol.storage),
+            self.config.hundred_s_target.eq(self._config_hundred_s_target.storage),
+            self.config.hundred_s_tol   .eq(self._config_hundred_s_tol.storage),
+        ]
+
+        # Status.
+        self._status_one_s_error     = CSRStatus(32, description="Error value for 1-second interval.")
+        self._status_ten_s_error     = CSRStatus(32, description="Error value for 10-second interval.")
+        self._status_hundred_s_error = CSRStatus(32, description="Error value for 100-second interval.")
+        self._status_dac_tuned_val   = CSRStatus(16, description="DAC tuned value.")
+        self._status_accuracy        = CSRStatus(4,  description="Accuracy status.")
+        self._status_pps_active      = CSRStatus(1,  description="PPS active status.")
+        self._status_state           = CSRStatus(4,  description="Current state.")
+        self.comb += [
+            self._status_one_s_error.status    .eq(self.status.one_s_error),
+            self._status_ten_s_error.status    .eq(self.status.ten_s_error),
+            self._status_hundred_s_error.status.eq(self.status.hundred_s_error),
+            self._status_dac_tuned_val.status  .eq(self.status.dac_tuned_val),
+            self._status_accuracy.status       .eq(self.status.accuracy),
+            self._status_pps_active.status     .eq(self.status.pps_active),
+            self._status_state.status          .eq(self.status.state),
+        ]
 
     def add_sources(self):
         from litex.gen import LiteXContext
