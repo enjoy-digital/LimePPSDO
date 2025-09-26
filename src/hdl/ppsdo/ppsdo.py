@@ -21,12 +21,6 @@ ppsdo_uart_layout = [
     ("tx",  1),
 ]
 
-ppsdo_spi_layout = [
-    ("clk",   1),
-    ("cs_n",  1),
-    ("mosi",  1),
-]
-
 ppsdo_config_layout = [
     ("one_s_target",    32, DIR_M_TO_S),  # Target value for 1-second interval.
     ("one_s_tol",       32, DIR_M_TO_S),  # Tolerance for 1-second interval.
@@ -64,9 +58,6 @@ class PPSDO(LiteXModule):
 
         # Status.
         self.status = Record(ppsdo_status_layout)
-
-        # SPI DAC.
-        self.spi    = Record(ppsdo_spi_layout)
 
         # CSRs.
         if with_csr:
@@ -111,11 +102,6 @@ class PPSDO(LiteXModule):
             o_status_accuracy      = self.status.accuracy,
             o_status_pps_active    = self.status.pps_active,
             o_status_state         = self.status.state,
-
-            # SPI DAC.
-            o_spi_clk              = self.spi.clk,
-            o_spi_cs_n             = self.spi.cs_n,
-            o_spi_mosi             = self.spi.mosi,
         )
 
     def add_csr(self):

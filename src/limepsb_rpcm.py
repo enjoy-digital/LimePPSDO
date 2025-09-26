@@ -229,11 +229,29 @@ class BaseSoC(SoCMini):
 
             # Core Status.
             self.ppsdo.status.connect(self.gpsdocfg.status),
+        ]
 
-            # SPI DAC.
-            spi_dac_pads.clk.eq(ppsdo.spi.clk),
-            spi_dac_pads.cs_n.eq(ppsdo.spi.cs_n),
-            spi_dac_pads.mosi.eq(ppsdo.spi.mosi),
+        # SPI DAC Control --------------------------------------------------------------------------
+
+        self.spi_dac = spi_dac = SPIMaster(
+            pads         = None,
+            data_width   = 24,
+            sys_clk_freq = sys_clk_freq,
+            spi_clk_freq = 1e6,
+            with_csr     = False,
+        )
+        self.comb += [
+            # Continuous Update.
+            self.spi_dac.start.eq(1),
+            self.spi_dac.length.eq(24),
+            # Power-down control bits (PD1 PD0).
+            self.spi_dac.mosi[16:18].eq(0b00),
+            # 16-bit DAC value.
+            self.spi_dac.mosi[0:16].eq(self.ppsdo.status.dac_tuned_val),
+            # Connect to pads.
+            spi_dac_pads.clk.eq(~spi_dac.pads.clk),
+            spi_dac_pads.cs_n.eq(spi_dac.pads.cs_n),
+            spi_dac_pads.mosi.eq(spi_dac.pads.mosi),
         ]
 
         # SPI Sharing Logic.

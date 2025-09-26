@@ -26,8 +26,6 @@ from litex.soc.integration.soc import SoCRegion
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
 
-from litex.soc.cores.spi import SPIMaster
-
 from hdl.pps_detector.src.pps_detector import PPSDetector
 from hdl.vctcxo_tamer.src.vctcxo_tamer import VCTCXOTamer
 
@@ -71,13 +69,6 @@ def get_common_ios():
         ("status_accuracy",      0, Pins(8)),
         ("status_state",         0, Pins(8)),
         ("status_pps_active",    0, Pins(1)),
-
-        # SPI DAC.
-        ("spi", 0,
-            Subsignal("clk",  Pins(1)),
-            Subsignal("cs_n", Pins(1)),
-            Subsignal("mosi", Pins(1)),
-        ),
     ]
 
 # Platform -----------------------------------------------------------------------------------------
@@ -147,7 +138,6 @@ class PPSDO(SoCCore):
 
         pps                  = platform.request("pps")
         enable               = platform.request("enable")
-        spi_pads             = platform.request("spi")
 
         # Config pads.
         config_1s_target     = platform.request("config_1s_target")
@@ -193,29 +183,6 @@ class PPSDO(SoCCore):
             status_dac_tuned_val .eq(self.vctcxo_tamer.status_dac_tuned_val),
             status_accuracy      .eq(self.vctcxo_tamer.status_accuracy),
             status_state         .eq(self.vctcxo_tamer.status_state),
-        ]
-
-        # SPI DAC Control (always internal, no sharing) --------------------------------------------
-
-        self.spi_dac = spi_dac = SPIMaster(
-            pads         = None,
-            data_width   = 24,
-            sys_clk_freq = sys_clk_freq,
-            spi_clk_freq = 1e6,
-            with_csr     = False,
-        )
-        self.comb += [
-            # Continuous Update.
-            self.spi_dac.start.eq(1),
-            self.spi_dac.length.eq(24),
-            # Power-down control bits (PD1 PD0).
-            self.spi_dac.mosi[16:18].eq(0b00),
-            # 16-bit DAC value.
-            self.spi_dac.mosi[0:16].eq(self.vctcxo_tamer.status_dac_tuned_val),
-            # Connect to pads.
-            spi_pads.clk.eq(~spi_dac.pads.clk),
-            spi_pads.cs_n.eq(spi_dac.pads.cs_n),
-            spi_pads.mosi.eq(spi_dac.pads.mosi),
         ]
 
     def export_sources(self, filename):
