@@ -1,4 +1,4 @@
-BUILD_DIR?=../build/ppsdo_core/
+BUILD_DIR?=../build/ppsdo/
 
 include $(BUILD_DIR)/software/include/generated/variables.mak
 include $(SOC_DIRECTORY)/software/common.mak

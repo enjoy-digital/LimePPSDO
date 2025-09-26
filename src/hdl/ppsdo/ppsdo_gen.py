@@ -230,9 +230,9 @@ def main():
         builder = Builder(soc)
         builder.build(run=build)
         if prepare:
-            ret = os.system(f"cd firmware && make clean all BUILD_DIR=../build/ppsdo")
+            ret = os.system(f"cd firmware && make clean all")
             if ret != 0:
-                raise RuntimeError("Firmware build failed")
+                raise RuntimeError("Firmware build failed.")
 
     # Export sources
     soc.export_sources(f"ppsdo_sources.py")

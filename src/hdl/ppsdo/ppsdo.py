@@ -148,7 +148,9 @@ class PPSDO(LiteXModule):
 
         # Generate Core.
         # --------------
-        os.system(f"cd {cdir} && python3 ppsdo_gen.py --sys-clk-freq={LiteXContext.top.sys_clk_freq}")
+        ret = os.system(f"cd {cdir} && python3 ppsdo_gen.py --sys-clk-freq={LiteXContext.top.sys_clk_freq}")
+        if ret != 0:
+            raise RuntimeError(f"PPSDO generation failed.")
 
         # Import Core Sources.
         # --------------------
