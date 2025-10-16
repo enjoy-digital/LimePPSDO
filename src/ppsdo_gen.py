@@ -26,8 +26,8 @@ from litex.soc.integration.soc import SoCRegion
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
 
-from hdl.pps_detector.src.pps_detector import PPSDetector
-from hdl.vctcxo_tamer.src.vctcxo_tamer import VCTCXOTamer
+from LimeDFB.pps_detector.src.pps_detector import PPSDetector
+from LimeDFB.vctcxo_tamer.src.vctcxo_tamer import VCTCXOTamer
 
 # IOs/Interfaces -----------------------------------------------------------------------------------
 
