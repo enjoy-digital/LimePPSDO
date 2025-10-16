@@ -1,0 +1,4 @@
+[submodule "gateware/src/LimeDFB"]
+	path = gateware/src/LimeDFB
+	url = https://github.com/enjoy-digital/LimeDFB.git
+	branch = ppsdo
